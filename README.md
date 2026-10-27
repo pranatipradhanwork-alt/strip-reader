@@ -48,7 +48,30 @@ Tests: `pytest -q`
 - Names are matched against a real medicine list, and brands are mapped to generics.
 - Abstain rules: low confidence, handwriting, unknown name, missing strength or a bad photo all lead to "Please confirm with a pharmacist or doctor".
 - The app never invents a dose. Strength and timing are copied text only.
-- 9 safety tests pass. The mock demo runs without a key.
+- The app never treats timing on a strip or box as a dose. Only a printed prescription counts; anything else (a pharmacy sticker, a pen mark) is shown with a "confirm" warning.
+- Brand and generic printed on the same strip (e.g. "Dolo-650" and "Paracetamol 650 mg") are merged into one medicine.
+- Gemini replies are saved per photo, so a photo is never sent twice. When Gemini is busy the app waits and retries; when the daily free limit runs out it switches to a lite model.
+- 16 safety tests pass. The mock demo runs without a key.
+
+### First real run (12 photos: 6 prescriptions, 6 strips/boxes)
+
+Models: `gemini-3.8-flash` (photos 1–4), then `gemini-3.5-flash-lite` once the free daily limit (20 requests) ran out.
+
+| | Count |
+|---|---|
+| Medicines read | 28 |
+| Marked OK | 4 (Dolo 650, Ondem MD 4, Electral, Drotaverine 80 mg; all printed strips/boxes) |
+| Marked CONFIRM | 24 (all handwritten items, plus strips with an unknown name or missing strength) |
+| Wrongly marked OK | 0 found by eye (not yet a proper labelled eval) |
+
+What the run taught us, and what was fixed:
+- **Wrong match:** "Amoxyclav" matched "Mox" (plain amoxicillin). Fixed: no partial matching inside longer words.
+- **Wrong match the other way:** "Paracetamol" matched the combo "Aceclofenac + Paracetamol". Fixed: a list name matches only if all its words were read.
+- **Suffixes:** "Montair Plus" is not "Montair". Now any extra word means CONFIRM.
+- **Sticker timing:** the Ondem strip had a Bengali pharmacy sticker with a pen tick ("১-০-১"). It is now shown with a warning, not as a dose.
+- **Unit-less strengths** on prescriptions ("Nexpro (40)") are dropped, not guessed as mg. Correct, but week 2 should show them as "40 (unit not written)".
+- **Medicine list:** brands seen in these photos were added (Daxid, Nexpro RD, Ciplar-LA, Rivotril, Eptoin and others). This makes these photos easier than new ones, so week 2 needs a full list and a fresh test set.
+- Photo 1 (a prescription page with no medicines on it) correctly returned nothing.
 
 ## Next
 
@@ -58,7 +81,7 @@ Tests: `pytest -q`
 3. Low-network mode: compress photos hard, retry on failure, cache the medicine list and past results, and fall back to a text-only answer.
 4. Voice: read the card aloud in the person's language (Hindi, Odia, English first).
 5. RAG over medicine leaflets: short, plain answers to "what is this for?" with sources.
-6. A bigger medicine list (the full Indian brand list and Jan Aushadhi).
+6. A bigger medicine list (the full Indian brand list and Jan Aushadhi), so new photos aren't matched against a list tuned on these ones.
 
 **Week 2**
 1. Test set: real photos (strips, boxes, printed and handwritten prescriptions) with names blurred and labelled by hand.

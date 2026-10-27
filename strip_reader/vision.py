@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import time
 from pathlib import Path
 
 from PIL import Image, ImageOps
@@ -68,16 +69,36 @@ def read_image(img: Image.Image, model: str | None = None) -> dict:
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)
     client = genai.Client()
-    resp = client.models.generate_content(
-        model=model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
-        contents=[types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg"), PROMPT],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=SCHEMA,
-            temperature=0,
-        ),
-    )
-    return json.loads(resp.text)
+    from google.genai import errors
+
+    model = model or os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    fallback = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")
+    for attempt in range(6):
+        try:
+            resp = client.models.generate_content(
+                model=model,
+                contents=[types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg"), PROMPT],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=SCHEMA,
+                    temperature=0,
+                ),
+            )
+            out = json.loads(resp.text)
+            out["_model"] = model
+            return out
+        except (errors.ServerError, errors.ClientError) as e:
+            # Retry only "busy" errors (503 overloaded, 429 rate limit); others are real bugs.
+            daily_limit = "PerDay" in str(e)  # waiting won't help; quota resets tomorrow
+            if daily_limit and model != fallback:
+                print(f"  Daily free limit reached for {model}; switching to {fallback}.", flush=True)
+                model = fallback
+                continue
+            if getattr(e, "code", None) not in (429, 500, 503) or daily_limit or attempt == 5:
+                raise
+            wait = min(60, 5 * 2 ** attempt)
+            print(f"  Gemini busy ({e.code}), retrying in {wait}s...", flush=True)
+            time.sleep(wait)
 
 
 def crop(img: Image.Image, box_2d, out_path: Path, pad: float = 0.03) -> str | None:
