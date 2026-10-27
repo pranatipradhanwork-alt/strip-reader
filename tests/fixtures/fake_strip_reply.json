@@ -1,0 +1,5 @@
+{"image_type": "strip", "image_quality": "good", "items": [
+ {"name_as_printed": "DOLO 650", "strength": "650 mg", "timing_text": null, "source": "printed_strip", "confidence": 0.96, "box_2d": [120, 50, 230, 400]},
+ {"name_as_printed": "Telma", "strength": "40 mg", "timing_text": "1-0-0 after food", "source": "printed_strip", "confidence": 0.9, "box_2d": [490, 50, 600, 300]},
+ {"name_as_printed": "Zorblaxin", "strength": null, "timing_text": null, "source": "handwritten", "confidence": 0.35, "box_2d": [790, 50, 900, 420]}
+]}

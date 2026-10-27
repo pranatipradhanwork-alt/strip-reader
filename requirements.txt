@@ -1,0 +1,5 @@
+google-genai>=1.0
+pillow
+rapidfuzz
+python-dotenv
+pytest
