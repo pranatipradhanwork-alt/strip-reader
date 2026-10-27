@@ -8,7 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .safety import CONFIRM_MSG, check_item, cross_check, load_medicines
+from .safety import CONFIRM_MSG, check_item, cross_check, load_medicines, merge_same_medicine
 from .vision import crop, load_image, read_image
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -19,14 +19,24 @@ def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | 
     all_items, per_image = [], []
     for path in images:
         img = load_image(path)
-        raw = json.loads(Path(mock).read_text()) if mock else read_image(img, model)
+        cache = out_dir / f"{Path(path).stem}_raw.json"
+        if mock:
+            raw = json.loads(Path(mock).read_text())
+        elif cache.exists():
+            raw = json.loads(cache.read_text())
+        else:
+            raw = read_image(img, model)
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text(json.dumps(raw, indent=2, ensure_ascii=False))
         items = []
-        for n, r in enumerate(raw.get("items", []), 1):
+        for n, r in enumerate(merge_same_medicine(raw.get("items", []), medicines), 1):
             item = check_item(r, medicines)
             item.crop_path = crop(img, r.get("box_2d"), out_dir / f"{Path(path).stem}_item{n}.png")
             if raw.get("image_quality", "good") != "good":
                 item.reasons.append(f"photo is {raw['image_quality']}")
                 item.status, item.message = "confirm", CONFIRM_MSG
+            if r.get("also_printed_as"):
+                item.reasons.append("also printed as: " + ", ".join(map(str, r["also_printed_as"])))
             items.append(item)
         per_image.append({"image": path, "image_type": raw.get("image_type"),
                           "image_quality": raw.get("image_quality"), "items": items})
@@ -50,6 +60,8 @@ def show(result: dict) -> None:
             if i["generic"]:
                 print(f"     generic   : {i['generic']}   (list match {i['match_score']}%)")
             print(f"     timing    : {i['timing_text'] or 'not printed'}")
+            if i.get("timing_note"):
+                print(f"     !! {i['timing_note']}")
             print(f"     confidence: {i['confidence']:.2f}")
             if i["crop_path"]:
                 print(f"     crop      : {i['crop_path']}")
@@ -65,7 +77,7 @@ def main() -> None:
     p.add_argument("images", nargs="+")
     p.add_argument("--out", default=str(ROOT / "out"), help="folder for crops and result.json")
     p.add_argument("--mock", help="use a saved model reply (JSON) instead of calling Gemini")
-    p.add_argument("--model", help="Gemini model name (default from GEMINI_MODEL or gemini-2.5-flash)")
+    p.add_argument("--model", help="Gemini model name (default from GEMINI_MODEL or gemini-3.8-flash)")
     a = p.parse_args()
     out = Path(a.out)
     result = run(a.images, out, a.mock, a.model)
