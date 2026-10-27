@@ -1,0 +1,158 @@
+name,generic,kind
+Paracetamol,Paracetamol,generic
+Acetaminophen,Paracetamol,generic
+Crocin,Paracetamol,brand
+Dolo 650,Paracetamol,brand
+Calpol,Paracetamol,brand
+Ibuprofen,Ibuprofen,generic
+Brufen,Ibuprofen,brand
+Combiflam,Ibuprofen + Paracetamol,brand
+Diclofenac,Diclofenac,generic
+Voveran,Diclofenac,brand
+Aceclofenac,Aceclofenac,generic
+Zerodol,Aceclofenac,brand
+Aspirin,Aspirin,generic
+Ecosprin,Aspirin,brand
+Disprin,Aspirin,brand
+Clopidogrel,Clopidogrel,generic
+Clopilet,Clopidogrel,brand
+Atorvastatin,Atorvastatin,generic
+Atorva,Atorvastatin,brand
+Lipitor,Atorvastatin,brand
+Rosuvastatin,Rosuvastatin,generic
+Rosuvas,Rosuvastatin,brand
+Amlodipine,Amlodipine,generic
+Amlong,Amlodipine,brand
+Stamlo,Amlodipine,brand
+Telmisartan,Telmisartan,generic
+Telma,Telmisartan,brand
+Losartan,Losartan,generic
+Losar,Losartan,brand
+Olmesartan,Olmesartan,generic
+Metoprolol,Metoprolol,generic
+Metolar,Metoprolol,brand
+Atenolol,Atenolol,generic
+Aten,Atenolol,brand
+Bisoprolol,Bisoprolol,generic
+Concor,Bisoprolol,brand
+Ramipril,Ramipril,generic
+Cardace,Ramipril,brand
+Enalapril,Enalapril,generic
+Hydrochlorothiazide,Hydrochlorothiazide,generic
+Chlorthalidone,Chlorthalidone,generic
+Furosemide,Furosemide,generic
+Lasix,Furosemide,brand
+Torsemide,Torsemide,generic
+Spironolactone,Spironolactone,generic
+Aldactone,Spironolactone,brand
+Digoxin,Digoxin,generic
+Isosorbide Mononitrate,Isosorbide Mononitrate,generic
+Warfarin,Warfarin,generic
+Metformin,Metformin,generic
+Glycomet,Metformin,brand
+Glucophage,Metformin,brand
+Glimepiride,Glimepiride,generic
+Amaryl,Glimepiride,brand
+Gliclazide,Gliclazide,generic
+Diamicron,Gliclazide,brand
+Glipizide,Glipizide,generic
+Sitagliptin,Sitagliptin,generic
+Januvia,Sitagliptin,brand
+Vildagliptin,Vildagliptin,generic
+Galvus,Vildagliptin,brand
+Teneligliptin,Teneligliptin,generic
+Dapagliflozin,Dapagliflozin,generic
+Empagliflozin,Empagliflozin,generic
+Jardiance,Empagliflozin,brand
+Pioglitazone,Pioglitazone,generic
+Voglibose,Voglibose,generic
+Insulin Glargine,Insulin Glargine,generic
+Levothyroxine,Levothyroxine,generic
+Thyronorm,Levothyroxine,brand
+Eltroxin,Levothyroxine,brand
+Pantoprazole,Pantoprazole,generic
+Pan 40,Pantoprazole,brand
+Pantocid,Pantoprazole,brand
+Omeprazole,Omeprazole,generic
+Omez,Omeprazole,brand
+Rabeprazole,Rabeprazole,generic
+Razo,Rabeprazole,brand
+Esomeprazole,Esomeprazole,generic
+Ranitidine,Ranitidine,generic
+Famotidine,Famotidine,generic
+Domperidone,Domperidone,generic
+Domstal,Domperidone,brand
+Ondansetron,Ondansetron,generic
+Emeset,Ondansetron,brand
+Metoclopramide,Metoclopramide,generic
+Loperamide,Loperamide,generic
+Lactulose,Lactulose,generic
+Amoxicillin,Amoxicillin,generic
+Mox,Amoxicillin,brand
+Amoxicillin + Clavulanic Acid,Amoxicillin + Clavulanic Acid,generic
+Augmentin,Amoxicillin + Clavulanic Acid,brand
+Azithromycin,Azithromycin,generic
+Azithral,Azithromycin,brand
+Azee,Azithromycin,brand
+Ciprofloxacin,Ciprofloxacin,generic
+Ciplox,Ciprofloxacin,brand
+Levofloxacin,Levofloxacin,generic
+Ofloxacin,Ofloxacin,generic
+Cefixime,Cefixime,generic
+Taxim-O,Cefixime,brand
+Cefuroxime,Cefuroxime,generic
+Cefpodoxime,Cefpodoxime,generic
+Doxycycline,Doxycycline,generic
+Metronidazole,Metronidazole,generic
+Flagyl,Metronidazole,brand
+Nitrofurantoin,Nitrofurantoin,generic
+Fluconazole,Fluconazole,generic
+Acyclovir,Acyclovir,generic
+Albendazole,Albendazole,generic
+Cetirizine,Cetirizine,generic
+Okacet,Cetirizine,brand
+Levocetirizine,Levocetirizine,generic
+Levocet,Levocetirizine,brand
+Fexofenadine,Fexofenadine,generic
+Allegra,Fexofenadine,brand
+Montelukast,Montelukast,generic
+Montair,Montelukast,brand
+Salbutamol,Salbutamol,generic
+Asthalin,Salbutamol,brand
+Budesonide,Budesonide,generic
+Prednisolone,Prednisolone,generic
+Wysolone,Prednisolone,brand
+Dexamethasone,Dexamethasone,generic
+Methylprednisolone,Methylprednisolone,generic
+Alprazolam,Alprazolam,generic
+Clonazepam,Clonazepam,generic
+Escitalopram,Escitalopram,generic
+Sertraline,Sertraline,generic
+Amitriptyline,Amitriptyline,generic
+Gabapentin,Gabapentin,generic
+Pregabalin,Pregabalin,generic
+Levetiracetam,Levetiracetam,generic
+Phenytoin,Phenytoin,generic
+Sodium Valproate,Sodium Valproate,generic
+Donepezil,Donepezil,generic
+Levodopa + Carbidopa,Levodopa + Carbidopa,generic
+Syndopa,Levodopa + Carbidopa,brand
+Tamsulosin,Tamsulosin,generic
+Urimax,Tamsulosin,brand
+Finasteride,Finasteride,generic
+Alendronate,Alendronate,generic
+Calcium Carbonate + Vitamin D3,Calcium Carbonate + Vitamin D3,generic
+Shelcal,Calcium Carbonate + Vitamin D3,brand
+Cholecalciferol,Cholecalciferol,generic
+Methylcobalamin,Methylcobalamin,generic
+Folic Acid,Folic Acid,generic
+Ferrous Sulphate,Ferrous Sulphate,generic
+Allopurinol,Allopurinol,generic
+Febuxostat,Febuxostat,generic
+Colchicine,Colchicine,generic
+Tramadol,Tramadol,generic
+Hydroxychloroquine,Hydroxychloroquine,generic
+Methotrexate,Methotrexate,generic
+Ursodeoxycholic Acid,Ursodeoxycholic Acid,generic
+Sucralfate,Sucralfate,generic
+Oral Rehydration Salts,Oral Rehydration Salts,generic

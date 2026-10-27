@@ -1,0 +1,7 @@
+.venv/
+.env
+out/
+__pycache__/
+.pytest_cache/
+samples/*
+!samples/.gitkeep
