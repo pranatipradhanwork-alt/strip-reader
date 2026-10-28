@@ -57,3 +57,46 @@ def test_card_without_crops_is_tiny():
     s = build_schedule(reply)
     assert len(card_html(s, "or", crops=False)) < len(card_html(s, "or", crops=True))
     assert len(card_text(s, "or").encode()) < 2000            # fits in a couple of SMS/one WhatsApp text
+
+
+def test_upload_steps_down_to_smaller_photo(monkeypatch):
+    """A dropped upload is retried with a smaller photo before giving up."""
+    import httpx
+    from google import genai
+    from strip_reader import vision
+
+    sizes = []
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            sizes.append(len(contents[0].inline_data.data))
+            if len(sizes) < 3:
+                raise httpx.ReadTimeout("slow network")
+            class R: text = '{"image_type": "strip", "image_quality": "good", "items": []}'
+            return R()
+
+    class FakeClient:
+        def __init__(self, **k): self.models = FakeModels()
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    monkeypatch.setattr(vision.time, "sleep", lambda s: None)
+    out = vision.read_image(load_image(FIX / "printed_rx.png"), "m", "normal")
+    assert out["_profile"] == "tiny" and sizes[0] > sizes[1] > sizes[2]
+
+
+def test_gives_up_to_queue_after_smallest(monkeypatch):
+    import httpx
+    import pytest
+    from google import genai
+    from strip_reader import vision
+
+    class FakeClient:
+        def __init__(self, **k):
+            self.models = type("M", (), {"generate_content": lambda *a, **k: (_ for _ in ()).throw(httpx.ConnectError("down"))})()
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    monkeypatch.setattr(vision.time, "sleep", lambda s: None)
+    with pytest.raises(OfflineError):
+        vision.read_image(load_image(FIX / "printed_rx.png"), "m", "normal")
