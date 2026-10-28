@@ -1,0 +1,33 @@
+{
+  "_language": "Odia",
+  "_checked_by": "Pranati (native speaker), 28 Oct 2026",
+  "_unchecked": ["times_a_day", "reasons.source_unknown", "reasons.agrees_printed", "reasons.no_printed_agrees"],
+  "title": "ଆଜିର ଔଷଧ",
+  "morning": "ସକାଳ", "afternoon": "ମଧ୍ୟାହ୍ନ", "evening": "ସନ୍ଧ୍ୟା", "night": "ରାତି",
+  "as_needed": "ଆବଶ୍ୟକ ହେଲେ ହିଁ",
+  "ask": "ପ୍ରଥମେ ଫାର୍ମାସିଷ୍ଟଙ୍କୁ ପଚାରନ୍ତୁ",
+  "none": "କିଛି ନାହିଁ",
+  "after food": "ଖାଇବା ପରେ", "before food": "ଖାଇବା ପୂର୍ବରୁ", "with food": "ଖାଇବା ସହିତ",
+  "days": "{n} ଦିନ ପାଇଁ",
+  "times_a_day": "ଦିନକୁ {n} ଥର",
+  "read": "ପଢ଼ାଗଲା:",
+  "footer": "ଏହି କାର୍ଡ ପଢ଼ିବାରେ ସାହାଯ୍ୟ ପାଇଁ, ଡାକ୍ତରୀ ପରାମର୍ଶ ନୁହେଁ।",
+  "confirm": "ଦୟାକରି ଫାର୍ମାସିଷ୍ଟ କିମ୍ବା ଡାକ୍ତରଙ୍କ ସହ ନିଶ୍ଚିତ କରନ୍ତୁ।",
+  "reasons": {
+    "low_confidence": "ପଢ଼ିବାରେ ନିଶ୍ଚିତତା କମ୍",
+    "handwritten": "ହାତରେ ଲେଖା",
+    "source_unknown": "ଛପା ନା ହାତଲେଖା, ଜଣାପଡୁନାହିଁ",
+    "name_not_found": "ଔଷଧ ତାଲିକାରେ ନାମ ମିଳିଲା ନାହିଁ",
+    "name_partial": "ନାମ ପୂରା ମେଳ ଖାଉନାହିଁ",
+    "strength_missing": "ମାତ୍ରା ସ୍ପଷ୍ଟ ଛପା ନାହିଁ",
+    "photo_blurry": "ଫଟୋ ଅସ୍ପଷ୍ଟ",
+    "photo_dark": "ଫଟୋ ଅନ୍ଧାର",
+    "photo_cut_off": "ଫଟୋ କଟି ଯାଇଛି",
+    "no_timing": "ସମୟ ଲେଖା ନାହିଁ",
+    "timing_not_printed_rx": "ସମୟ ଛପା ପ୍ରେସକ୍ରିପସନରୁ ନୁହେଁ",
+    "times_not_written": "ଦିନର କେଉଁ ସମୟ, ଲେଖା ନାହିଁ",
+    "timing_unclear": "ସମୟ ସ୍ପଷ୍ଟ ନୁହେଁ",
+    "agrees_printed": "ଛପା ଷ୍ଟ୍ରିପ୍ ସହ ମେଳ ଖାଉଛି",
+    "no_printed_agrees": "ମେଳ ଖାଉଥିବା ଛପା ଷ୍ଟ୍ରିପ୍ ମିଳିଲା ନାହିଁ"
+  }
+}

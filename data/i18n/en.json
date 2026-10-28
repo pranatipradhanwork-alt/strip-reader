@@ -1,0 +1,33 @@
+{
+  "_language": "English",
+  "_checked_by": "source language",
+  "_unchecked": [],
+  "title": "Your medicines today",
+  "morning": "Morning", "afternoon": "Afternoon", "evening": "Evening", "night": "Night",
+  "as_needed": "Only when needed",
+  "ask": "Ask your pharmacist first",
+  "none": "Nothing here",
+  "after food": "after food", "before food": "before food", "with food": "with food",
+  "days": "for {n} days",
+  "times_a_day": "{n} time(s) a day",
+  "read": "read:",
+  "footer": "This card is a reading aid, not medical advice.",
+  "confirm": "Please confirm with a pharmacist or doctor.",
+  "reasons": {
+    "low_confidence": "low reading confidence",
+    "handwritten": "handwritten text",
+    "source_unknown": "not sure if printed or handwritten",
+    "name_not_found": "name not found in the medicine list",
+    "name_partial": "name only partly matches",
+    "strength_missing": "strength not clearly printed",
+    "photo_blurry": "photo is blurry",
+    "photo_dark": "photo is dark",
+    "photo_cut_off": "photo is cut off",
+    "no_timing": "no timing written",
+    "timing_not_printed_rx": "timing not from a printed prescription",
+    "times_not_written": "times of day not written",
+    "timing_unclear": "timing not clear",
+    "agrees_printed": "matches a printed strip",
+    "no_printed_agrees": "no printed strip seen that matches"
+  }
+}

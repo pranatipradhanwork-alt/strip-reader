@@ -9,7 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from .safety import CONFIRM_MSG, check_item, cross_check, load_medicines, merge_same_medicine
-from .card import LABELS, build_schedule, card_html, card_text
+from .card import LANGS, build_schedule, card_html, card_text
 from .vision import crop, load_image, read_image
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -34,10 +34,10 @@ def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | 
             item = check_item(r, medicines)
             item.crop_path = crop(img, r.get("box_2d"), out_dir / f"{Path(path).stem}_item{n}.png")
             if raw.get("image_quality", "good") != "good":
-                item.reasons.append(f"photo is {raw['image_quality']}")
+                item.add(f"photo_{raw['image_quality']}", f"photo is {raw['image_quality']}")
                 item.status, item.message = "confirm", CONFIRM_MSG
             if r.get("also_printed_as"):
-                item.reasons.append("also printed as: " + ", ".join(map(str, r["also_printed_as"])))
+                item.reasons.append("also printed as: " + ", ".join(map(str, r["also_printed_as"])))  # info only
             items.append(item)
         per_image.append({"image": path, "image_type": raw.get("image_type"),
                           "image_quality": raw.get("image_quality"), "items": items})
@@ -79,7 +79,7 @@ def main() -> None:
     p.add_argument("--out", default=str(ROOT / "out"), help="folder for crops and result.json")
     p.add_argument("--mock", help="use a saved model reply (JSON) instead of calling Gemini")
     p.add_argument("--model", help="Gemini model name (default from GEMINI_MODEL or gemini-3.8-flash)")
-    p.add_argument("--lang", default="en", choices=sorted(LABELS), help="card language: en, hi or or (Odia)")
+    p.add_argument("--lang", default="en", choices=LANGS, help="card language (one file per language in data/i18n)")
     p.add_argument("--quiet", action="store_true", help="print only the schedule card")
     a = p.parse_args()
     out = Path(a.out)

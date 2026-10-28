@@ -1,0 +1,33 @@
+{
+  "_language": "Hindi",
+  "_checked_by": "not yet checked by a native speaker",
+  "_unchecked": ["*"],
+  "title": "आज की दवाइयाँ",
+  "morning": "सुबह", "afternoon": "दोपहर", "evening": "शाम", "night": "रात",
+  "as_needed": "ज़रूरत होने पर ही",
+  "ask": "पहले फार्मासिस्ट से पूछें",
+  "none": "कुछ नहीं",
+  "after food": "खाने के बाद", "before food": "खाने से पहले", "with food": "खाने के साथ",
+  "days": "{n} दिन तक",
+  "times_a_day": "दिन में {n} बार",
+  "read": "पढ़ा गया:",
+  "footer": "यह कार्ड पढ़ने में मदद के लिए है, डॉक्टर की सलाह नहीं।",
+  "confirm": "कृपया फार्मासिस्ट या डॉक्टर से पुष्टि करें।",
+  "reasons": {
+    "low_confidence": "पढ़ने में भरोसा कम",
+    "handwritten": "हाथ से लिखा",
+    "source_unknown": "छपा है या हाथ से लिखा, पता नहीं",
+    "name_not_found": "दवा सूची में नाम नहीं मिला",
+    "name_partial": "नाम पूरी तरह मेल नहीं खाता",
+    "strength_missing": "ताकत (mg) साफ़ छपी नहीं",
+    "photo_blurry": "फ़ोटो धुंधली है",
+    "photo_dark": "फ़ोटो में अंधेरा है",
+    "photo_cut_off": "फ़ोटो कटी हुई है",
+    "no_timing": "समय नहीं लिखा",
+    "timing_not_printed_rx": "समय छपे पर्चे से नहीं",
+    "times_not_written": "दिन का कौन सा समय, लिखा नहीं",
+    "timing_unclear": "समय साफ़ नहीं",
+    "agrees_printed": "छपी स्ट्रिप से मेल खाता है",
+    "no_printed_agrees": "मेल खाती छपी स्ट्रिप नहीं मिली"
+  }
+}
