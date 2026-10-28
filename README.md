@@ -116,11 +116,35 @@ Medicine names stay as printed (usually English).
 
 33 tests pass.
 
+## Day 3 (28 Oct 2026): pharmacist confirm step
+
+```bash
+python -m strip_reader.cli samples/raw/*.jpeg --out out/run1 --quiet   # read the photos
+python -m strip_reader.web out/run1                                   # open http://127.0.0.1:5050
+```
+
+The pharmacist page lists every item that is **not on the card yet**, with the picture of its label, what was read, and why it needs checking. For each one the pharmacist can:
+
+- **confirm**, after fixing the name, strength or timing if needed. The item moves onto the card with a ✓ ("checked by a pharmacist").
+- **not a medicine** (a toothbrush, a paste). The item is removed from the card.
+- **leave for doctor** (the default). The item stays under "Ask your pharmacist first".
+
+What the pharmacist types goes through the same safety rules:
+- The strength needs a unit ("40" is refused; "40 mg" is accepted).
+- The timing must say *when* ("1-0-0", "before breakfast"), not just "OD".
+- Their name is required.
+
+If any entry is wrong, **nothing** is saved, so a half-checked list never reaches the card. Each confirmation records who, when, and which fields they changed (`confirmations.json`), and it can be undone. Running the CLI again keeps the saved confirmations.
+
+Tested on the real photos: "Ciplar-LA, 40" was refused, "Ciplar-LA, 40 mg, 1-0-0 after food" moved onto the Odia morning card with a ✓, and "Orthohealth Paste" marked "not a medicine" left the card.
+
+45 tests pass.
+
 ## Next
 
 **Week 1**
 1. ~~Timing parse~~ and 2. ~~Schedule card~~: done on Day 2.
-2b. Pharmacist confirm step: tick an item to move it into the card. ("Why" notes are now translated.)
+2b. ~~Pharmacist confirm step~~: done on Day 3.
 3. Low-network mode: compress photos hard, retry on failure, cache the medicine list and past results, and fall back to a text-only answer.
 4. Voice: read the card aloud in the person's language (Hindi, Odia, English first).
 5. RAG over medicine leaflets: short, plain answers to "what is this for?" with sources.

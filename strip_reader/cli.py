@@ -9,6 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from .safety import CONFIRM_MSG, check_item, cross_check, load_medicines, merge_same_medicine
+from . import confirm
 from .card import LANGS, build_schedule, card_html, card_text
 from .vision import crop, load_image, read_image
 
@@ -86,7 +87,7 @@ def main() -> None:
     result = run(a.images, out, a.mock, a.model)
     out.mkdir(parents=True, exist_ok=True)
     (out / "result.json").write_text(json.dumps(result, indent=2, ensure_ascii=False))
-    sched = build_schedule(result)
+    sched = build_schedule(result, confirm.load(out / "confirmations.json"))
     (out / "schedule.json").write_text(json.dumps(sched, indent=2, ensure_ascii=False))
     (out / "card.html").write_text(card_html(sched, a.lang), encoding="utf-8")
     if not a.quiet:

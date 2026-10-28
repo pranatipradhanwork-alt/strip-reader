@@ -16,6 +16,7 @@ import html
 import io
 from pathlib import Path
 
+from .confirm import item_id
 from .timing import parse_timing
 
 I18N_DIR = Path(__file__).resolve().parent.parent / "data" / "i18n"
@@ -35,14 +36,30 @@ def labels(lang: str) -> dict:
 SLOT_ORDER = ("morning", "afternoon", "evening", "night")
 
 
-def build_schedule(result: dict) -> dict:
-    """Sort every item into a slot, 'as needed', or 'ask'."""
+def build_schedule(result: dict, confirmations: dict | None = None) -> dict:
+    """Sort every item into a slot, 'as needed', or 'ask'.
+
+    `confirmations` (from the pharmacist page) can move an item onto the card
+    or remove it as "not a medicine". See confirm.py.
+    """
+    confirmations = confirmations or {}
     sched = {s: [] for s in SLOT_ORDER}
     sched["as_needed"], sched["ask"] = [], []
     for img in result["images"]:
-        for i in img["items"]:
+        for n, i in enumerate(img["items"], 1):
+            iid = item_id(img.get("image", "photo"), n)
+            c = confirmations.get(iid)
+            if c and c["action"] == "not_medicine":
+                continue
+            if c and c["action"] == "confirm":
+                t = parse_timing(c["timing_text"])
+                entry = {"id": iid, "name": c["name"], "strength": c["strength"],
+                         "crop": i.get("crop_path"), "timing": t.to_dict(),
+                         "confirmed_by": c["by"], "confirmed_at": c["at"]}
+                _place(sched, entry, t)
+                continue
             t = parse_timing(i.get("timing_text"))
-            entry = {"name": _name(i),
+            entry = {"id": iid, "name": _name(i),
                      "strength": i["strength"], "crop": i.get("crop_path"),
                      "timing": t.to_dict() if t else None}
             why, codes = [], []
@@ -63,12 +80,16 @@ def build_schedule(result: dict) -> dict:
                 entry["why_codes"] = codes    # translated on the card
                 sched["ask"].append(entry)
                 continue
-            if t.as_needed and not t.slots:
-                sched["as_needed"].append({**entry, "amount": None})
-            for slot, amt in (t.slots or {}).items():
-                if amt:
-                    sched[slot].append({**entry, "amount": amt})
+            _place(sched, entry, t)
     return sched
+
+
+def _place(sched: dict, entry: dict, t) -> None:
+    if t.as_needed and not t.slots:
+        sched["as_needed"].append({**entry, "amount": None})
+    for slot, amt in (t.slots or {}).items():
+        if amt:
+            sched[slot].append({**entry, "amount": amt})
 
 
 def _name(i: dict) -> str:
@@ -130,6 +151,8 @@ def card_text(sched: dict, lang: str = "en") -> str:
         if read:
             lines.append(f"      {L['read']} {read}")
         lines.append(f"      → {why_text(e, L)}")
+    if any(e.get("confirmed_by") for k in (*SLOT_ORDER, "as_needed") for e in sched[k]):
+        lines.append(f"\n{L['confirmed_legend']}")
     if sched["ask"]:
         lines.append(f"\n{L['confirm']}")
     lines.append(f"\n{L['footer']}")
@@ -143,6 +166,8 @@ def _line(e: dict, L: dict) -> str:
         amt = {0.5: "½", 0.25: "¼"}.get(e["amount"], f"{e['amount']:g}")
         bits.append(f"{amt} ×")
     bits.append(_with_strength(e["name"], e["strength"]))
+    if e.get("confirmed_by"):
+        bits.append("✓")
     if t.get("reason"):
         bits.append(f"({t['reason']})")
     if t.get("food"):
@@ -187,6 +212,8 @@ def card_html(sched: dict, lang: str = "en") -> str:
     if sched["ask"]:
         ask_rows += f"<li class='confirm'>{esc(L['confirm'])}</li>"
     sections.append(f'<section class="ask"><h2>⚠️ {esc(L["ask"])}</h2><ul>{ask_rows}</ul></section>')
+    if any(e.get("confirmed_by") for k in (*SLOT_ORDER, "as_needed") for e in sched[k]):
+        sections.insert(0, f"<p class='legend'>{esc(L['confirmed_legend'])}</p>")
     return f"""<!doctype html>
 <html lang="{lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -209,6 +236,7 @@ li.none {{ color:var(--muted); }}
 .crop {{ display:block; max-width:100%; max-height:90px; margin-top:6px; border:1px solid var(--line); border-radius:6px; }}
 details {{ font-size:14px; color:var(--muted); margin-top:4px; }}
 li.confirm {{ font-weight:600; color:var(--warn); border-bottom:none; }}
+.legend {{ font-size:17px; color:var(--muted); margin:0 0 8px; }}
 footer {{ margin-top:24px; font-size:16px; color:var(--muted); }}
 </style></head>
 <body><main><h1>{esc(L['title'])}</h1>{''.join(sections)}

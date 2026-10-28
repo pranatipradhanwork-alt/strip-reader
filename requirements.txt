@@ -3,3 +3,4 @@ pillow
 rapidfuzz
 python-dotenv
 pytest
+flask

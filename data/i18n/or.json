@@ -1,13 +1,24 @@
 {
   "_language": "Odia",
   "_checked_by": "Pranati (native speaker), 28 Oct 2026",
-  "_unchecked": ["times_a_day", "reasons.source_unknown", "reasons.agrees_printed", "reasons.no_printed_agrees"],
+  "_unchecked": [
+    "times_a_day",
+    "reasons.source_unknown",
+    "reasons.agrees_printed",
+    "reasons.no_printed_agrees",
+    "confirmed_legend"
+  ],
   "title": "ଆଜିର ଔଷଧ",
-  "morning": "ସକାଳ", "afternoon": "ମଧ୍ୟାହ୍ନ", "evening": "ସନ୍ଧ୍ୟା", "night": "ରାତି",
+  "morning": "ସକାଳ",
+  "afternoon": "ମଧ୍ୟାହ୍ନ",
+  "evening": "ସନ୍ଧ୍ୟା",
+  "night": "ରାତି",
   "as_needed": "ଆବଶ୍ୟକ ହେଲେ ହିଁ",
   "ask": "ପ୍ରଥମେ ଫାର୍ମାସିଷ୍ଟଙ୍କୁ ପଚାରନ୍ତୁ",
   "none": "କିଛି ନାହିଁ",
-  "after food": "ଖାଇବା ପରେ", "before food": "ଖାଇବା ପୂର୍ବରୁ", "with food": "ଖାଇବା ସହିତ",
+  "after food": "ଖାଇବା ପରେ",
+  "before food": "ଖାଇବା ପୂର୍ବରୁ",
+  "with food": "ଖାଇବା ସହିତ",
   "days": "{n} ଦିନ ପାଇଁ",
   "times_a_day": "ଦିନକୁ {n} ଥର",
   "read": "ପଢ଼ାଗଲା:",
@@ -29,5 +40,6 @@
     "timing_unclear": "ସମୟ ସ୍ପଷ୍ଟ ନୁହେଁ",
     "agrees_printed": "ଛପା ଷ୍ଟ୍ରିପ୍ ସହ ମେଳ ଖାଉଛି",
     "no_printed_agrees": "ମେଳ ଖାଉଥିବା ଛପା ଷ୍ଟ୍ରିପ୍ ମିଳିଲା ନାହିଁ"
-  }
+  },
+  "confirmed_legend": "✓ = ଫାର୍ମାସିଷ୍ଟ ଯାଞ୍ଚ କରିଛନ୍ତି"
 }

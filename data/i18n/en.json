@@ -3,11 +3,16 @@
   "_checked_by": "source language",
   "_unchecked": [],
   "title": "Your medicines today",
-  "morning": "Morning", "afternoon": "Afternoon", "evening": "Evening", "night": "Night",
+  "morning": "Morning",
+  "afternoon": "Afternoon",
+  "evening": "Evening",
+  "night": "Night",
   "as_needed": "Only when needed",
   "ask": "Ask your pharmacist first",
   "none": "Nothing here",
-  "after food": "after food", "before food": "before food", "with food": "with food",
+  "after food": "after food",
+  "before food": "before food",
+  "with food": "with food",
   "days": "for {n} days",
   "times_a_day": "{n} time(s) a day",
   "read": "read:",
@@ -29,5 +34,6 @@
     "timing_unclear": "timing not clear",
     "agrees_printed": "matches a printed strip",
     "no_printed_agrees": "no printed strip seen that matches"
-  }
+  },
+  "confirmed_legend": "✓ = checked by a pharmacist"
 }
