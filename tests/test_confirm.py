@@ -6,15 +6,15 @@ from strip_reader import confirm
 from strip_reader.card import build_schedule, card_text
 from strip_reader.web import create_app
 
-ITEM = {"matched_name": None, "name_as_read": "Ciplar-LA", "strength": None, "status": "confirm",
+ITEM = {"matched_name": None, "name_as_read": "Telma", "strength": None, "status": "confirm",
         "reasons": ["handwritten text"], "codes": ["handwritten"], "message": "", "source": "handwritten",
         "confidence": 0.95, "timing_text": "1 x od", "timing_note": "x", "crop_path": None}
-RESULT = {"images": [{"image": "samples/raw/img06.jpeg", "items": [ITEM]}]}
-IID = "img06.jpeg-item1"
+RESULT = {"images": [{"image": "samples/raw/img99.jpeg", "items": [ITEM]}]}
+IID = "img99.jpeg-item1"
 
 
 def ok_form(**kw):
-    f = {"action": "confirm", "by": "Pharmacist A", "name": "Ciplar-LA",
+    f = {"action": "confirm", "by": "Pharmacist A", "name": "Telma",
          "strength": "40 mg", "timing_text": "1-0-0 after food"}
     f.update(kw)
     return f
@@ -68,24 +68,24 @@ def client(tmp_path):
 def test_page_lists_item(client):
     c, _ = client
     r = c.get("/")
-    assert r.status_code == 200 and b"Ciplar-LA" in r.data
+    assert r.status_code == 200 and b"Telma" in r.data
 
 
 def test_bad_entry_saves_nothing(client):
     c, d = client
-    r = c.post("/", data={"by": "A", f"{IID}|action": "confirm", f"{IID}|name": "Ciplar-LA",
+    r = c.post("/", data={"by": "A", f"{IID}|action": "confirm", f"{IID}|name": "Telma",
                           f"{IID}|strength": "40", f"{IID}|timing_text": "1-0-0"})
     assert r.status_code == 400 and not (d / "confirmations.json").exists()
 
 
 def test_good_entry_saves_and_card_shows_it(client):
     c, d = client
-    r = c.post("/", data={"by": "A", f"{IID}|action": "confirm", f"{IID}|name": "Ciplar-LA",
+    r = c.post("/", data={"by": "A", f"{IID}|action": "confirm", f"{IID}|name": "Telma",
                           f"{IID}|strength": "40 mg", f"{IID}|timing_text": "1-0-0"})
     assert r.status_code == 302
     assert IID in json.loads((d / "confirmations.json").read_text())
     card = c.get("/card?lang=or").data.decode()
-    assert "Ciplar-LA" in card and "ସକାଳ" in card
+    assert "Telma" in card and "ସକାଳ" in card
 
 
 def test_undo(client):

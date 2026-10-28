@@ -65,12 +65,12 @@ Models: `gemini-3.8-flash` (photos 1–4), then `gemini-3.5-flash-lite` once the
 | Wrongly marked OK | 0 found by eye (not yet a proper labelled eval) |
 
 What the run taught us, and what was fixed:
-- **Wrong match:** "Amoxyclav" matched "Mox" (plain amoxicillin). Fixed: no partial matching inside longer words.
+- **Wrong match:** a combination antibiotic brand matched a short single-drug brand inside its name. Fixed: no partial matching inside longer words.
 - **Wrong match the other way:** "Paracetamol" matched the combo "Aceclofenac + Paracetamol". Fixed: a list name matches only if all its words were read.
-- **Suffixes:** "Montair Plus" is not "Montair". Now any extra word means CONFIRM.
+- **Suffixes:** "Brand Plus" or "Brand LC" is a different combination from "Brand". Now any extra word means CONFIRM.
 - **Sticker timing:** the Ondem strip had a Bengali pharmacy sticker with a pen tick ("১-০-১"). It is now shown with a warning, not as a dose.
-- **Unit-less strengths** on prescriptions ("Nexpro (40)") are dropped, not guessed as mg. Correct, but week 2 should show them as "40 (unit not written)".
-- **Medicine list:** brands seen in these photos were added (Daxid, Nexpro RD, Ciplar-LA, Rivotril, Eptoin and others). This makes these photos easier than new ones, so week 2 needs a full list and a fresh test set.
+- **Unit-less strengths** on prescriptions ("Tab X (40)") are dropped, not guessed as mg. Correct, but week 2 should show them as "40 (unit not written)".
+- **Medicine list:** brands seen in these photos were added. This makes these photos easier than new ones, so week 2 needs a full list and a fresh test set.
 - Photo 1 (a prescription page with no medicines on it) correctly returned nothing.
 
 ## Day 2 (28 Oct 2026): timing parse and schedule card
@@ -136,7 +136,7 @@ What the pharmacist types goes through the same safety rules:
 
 If any entry is wrong, **nothing** is saved, so a half-checked list never reaches the card. Each confirmation records who, when, and which fields they changed (`confirmations.json`), and it can be undone. Running the CLI again keeps the saved confirmations.
 
-Tested on the real photos: "Ciplar-LA, 40" was refused, "Ciplar-LA, 40 mg, 1-0-0 after food" moved onto the Odia morning card with a ✓, and "Orthohealth Paste" marked "not a medicine" left the card.
+Tested on the real photos: a strength typed as "40" was refused, the same item with "40 mg, 1-0-0 after food" moved onto the Odia morning card with a ✓, and a toothpaste marked "not a medicine" left the card.
 
 45 tests pass.
 

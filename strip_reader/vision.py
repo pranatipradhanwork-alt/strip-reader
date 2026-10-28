@@ -52,32 +52,66 @@ SCHEMA = {
 }
 
 
+# Upload profiles. Box coordinates are 0-1000, so crops are still cut from
+# the full photo on the phone even when a small copy is sent.
+PROFILES = {
+    "normal": {"max_side": 1600, "quality": 85, "gray": False},
+    "low":    {"max_side": 1024, "quality": 70, "gray": False},
+    "tiny":   {"max_side": 768,  "quality": 60, "gray": True},
+}
+TIMEOUT_S = 60
+
+
+class OfflineError(Exception):
+    """No network (or it kept failing). The photo should be queued, not lost."""
+
+
 def load_image(path: str | Path) -> Image.Image:
     img = ImageOps.exif_transpose(Image.open(path)).convert("RGB")
     img.thumbnail((MAX_SIDE, MAX_SIDE))
     return img
 
 
-def read_image(img: Image.Image, model: str | None = None) -> dict:
-    """Send the image to Gemini and return the parsed JSON."""
+def prepare(img: Image.Image, profile: str = "normal") -> bytes:
+    """The bytes actually uploaded for this network profile."""
+    p = PROFILES[profile]
+    small = img.copy()
+    small.thumbnail((p["max_side"], p["max_side"]))
+    if p["gray"]:
+        small = small.convert("L")
+    buf = io.BytesIO()
+    small.save(buf, format="JPEG", quality=p["quality"], optimize=True)
+    return buf.getvalue()
+
+
+def _is_network_error(e: Exception) -> bool:
+    import httpx
+    return isinstance(e, (httpx.TransportError, ConnectionError, TimeoutError, OSError))
+
+
+def read_image(img: Image.Image, model: str | None = None, profile: str = "normal") -> dict:
+    """Send the image to Gemini and return the parsed JSON.
+
+    Busy errors (429/500/503) and dropped connections are retried with a
+    growing wait. If the network stays down, OfflineError is raised so the
+    caller can queue the photo.
+    """
     from google import genai
-    from google.genai import types
+    from google.genai import errors, types
 
     if not (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")):
         raise SystemExit("GEMINI_API_KEY is not set. Add it to the .env file.")
 
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=85)
-    client = genai.Client()
-    from google.genai import errors
-
+    data = prepare(img, profile)
+    client = genai.Client(http_options=types.HttpOptions(timeout=TIMEOUT_S * 1000))
     model = model or os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     fallback = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")
+    net_failures = 0
     for attempt in range(6):
         try:
             resp = client.models.generate_content(
                 model=model,
-                contents=[types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg"), PROMPT],
+                contents=[types.Part.from_bytes(data=data, mime_type="image/jpeg"), PROMPT],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     response_schema=SCHEMA,
@@ -86,6 +120,8 @@ def read_image(img: Image.Image, model: str | None = None) -> dict:
             )
             out = json.loads(resp.text)
             out["_model"] = model
+            out["_profile"] = profile
+            out["_upload_bytes"] = len(data)
             return out
         except (errors.ServerError, errors.ClientError) as e:
             # Retry only "busy" errors (503 overloaded, 429 rate limit); others are real bugs.
@@ -99,6 +135,16 @@ def read_image(img: Image.Image, model: str | None = None) -> dict:
             wait = min(60, 5 * 2 ** attempt)
             print(f"  Gemini busy ({e.code}), retrying in {wait}s...", flush=True)
             time.sleep(wait)
+        except Exception as e:  # dropped connection, timeout, no network
+            if not _is_network_error(e):
+                raise
+            net_failures += 1
+            if net_failures >= 3:
+                raise OfflineError(str(e)) from e
+            wait = 5 * net_failures
+            print(f"  Network problem ({type(e).__name__}), retrying in {wait}s...", flush=True)
+            time.sleep(wait)
+    raise OfflineError("gave up after retries")
 
 
 def crop(img: Image.Image, box_2d, out_path: Path, pad: float = 0.03) -> str | None:
