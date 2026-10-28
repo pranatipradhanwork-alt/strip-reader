@@ -1,6 +1,7 @@
-google-genai>=1.0
-pillow
-rapidfuzz
-python-dotenv
-pytest
-flask
+# Pinned so every machine installs the same versions (tested on Python 3.13).
+google-genai==2.33.0
+pillow==13.0.0
+rapidfuzz==3.14.6
+python-dotenv==1.2.4
+flask==3.1.3
+pytest==9.1.1
