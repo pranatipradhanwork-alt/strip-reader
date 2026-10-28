@@ -59,7 +59,7 @@ PROFILES = {
     "low":    {"max_side": 1024, "quality": 70, "gray": False},
     "tiny":   {"max_side": 768,  "quality": 60, "gray": True},
 }
-TIMEOUT_S = 60
+TIMEOUT_S = 180  # this model can take 2-3 minutes on a photo
 
 
 class OfflineError(Exception):
@@ -92,9 +92,11 @@ def _is_network_error(e: Exception) -> bool:
 def read_image(img: Image.Image, model: str | None = None, profile: str = "normal") -> dict:
     """Send the image to Gemini and return the parsed JSON.
 
-    Busy errors (429/500/503) and dropped connections are retried with a
-    growing wait. If the network stays down, OfflineError is raised so the
-    caller can queue the photo.
+    Busy errors (429/500/503/504) are retried with a growing wait. When the
+    upload itself fails (slow or dropped network), the next try sends a
+    smaller photo: normal -> low -> tiny. Small photos read printed strips
+    just as well but handwriting worse, so we only shrink when we must.
+    If it still fails, OfflineError is raised so the caller can queue the photo.
     """
     from google import genai
     from google.genai import errors, types
@@ -102,6 +104,7 @@ def read_image(img: Image.Image, model: str | None = None, profile: str = "norma
     if not (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")):
         raise SystemExit("GEMINI_API_KEY is not set. Add it to the .env file.")
 
+    steps = list(PROFILES)[list(PROFILES).index(profile):]   # e.g. ["normal", "low", "tiny"]
     data = prepare(img, profile)
     client = genai.Client(http_options=types.HttpOptions(timeout=TIMEOUT_S * 1000))
     model = model or os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
@@ -124,14 +127,16 @@ def read_image(img: Image.Image, model: str | None = None, profile: str = "norma
             out["_upload_bytes"] = len(data)
             return out
         except (errors.ServerError, errors.ClientError) as e:
-            # Retry only "busy" errors (503 overloaded, 429 rate limit); others are real bugs.
+            # Retry only "busy" errors (503 overloaded, 504 timeout, 429 rate limit); others are real bugs.
             daily_limit = "PerDay" in str(e)  # waiting won't help; quota resets tomorrow
             if daily_limit and model != fallback:
                 print(f"  Daily free limit reached for {model}; switching to {fallback}.", flush=True)
                 model = fallback
                 continue
-            if getattr(e, "code", None) not in (429, 500, 503) or daily_limit or attempt == 5:
+            if getattr(e, "code", None) not in (429, 500, 503, 504) or daily_limit:
                 raise
+            if attempt == 5:
+                raise OfflineError(f"Gemini still busy ({e.code})") from e
             wait = min(60, 5 * 2 ** attempt)
             print(f"  Gemini busy ({e.code}), retrying in {wait}s...", flush=True)
             time.sleep(wait)
@@ -139,10 +144,13 @@ def read_image(img: Image.Image, model: str | None = None, profile: str = "norma
             if not _is_network_error(e):
                 raise
             net_failures += 1
-            if net_failures >= 3:
+            if net_failures >= len(steps):
                 raise OfflineError(str(e)) from e
+            profile = steps[net_failures]
+            data = prepare(img, profile)
             wait = 5 * net_failures
-            print(f"  Network problem ({type(e).__name__}), retrying in {wait}s...", flush=True)
+            print(f"  Network problem ({type(e).__name__}); retrying in {wait}s with a smaller photo "
+                  f"({profile}, {len(data) // 1024} KB)...", flush=True)
             time.sleep(wait)
     raise OfflineError("gave up after retries")
 

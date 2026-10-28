@@ -140,14 +140,42 @@ Tested on the real photos: a strength typed as "40" was refused, the same item w
 
 45 tests pass.
 
+## Day 4 (28 Oct 2026): low-network mode
+
+| Problem on a weak network | What the app does |
+|---|---|
+| Photo too big to upload | Starts at full size. If the upload fails, it retries with a smaller photo: **normal (~200 KB) → low (~80 KB) → tiny (~40 KB, grey)** |
+| Network drops completely | The photo is **saved to `out/queue/`**, never lost. The card says (in the person's language) "No network, your photo is saved". `--flush-queue` reads saved photos later. |
+| Gemini busy or slow (429/503/504) | Waits and retries (up to 3 min per photo), then queues the photo instead of crashing |
+| Same photo sent again | **Cached by photo content** (`out/cache/`), so it is never uploaded or charged twice |
+| Images won't load | `card.txt` is always saved: about 1 KB of plain text for SMS or a WhatsApp message. `--no-crops` makes the HTML card tiny. |
+
+Upload time for an average photo:
+
+| | original | normal | low | tiny |
+|---|---|---|---|---|
+| Size | 177 KB | 204 KB | 80 KB | 38 KB |
+| 2G (50 kbps) | 28 s | 33 s | **13 s** | **6 s** |
+
+**Does a smaller photo read worse?** We tested 3 photos at every size (same model, `gemini-3.5-flash-lite`):
+- **Printed strips/boxes:** the same at all sizes, except one box where "low" missed the strength. That item was marked CONFIRM, which is safe.
+- **Handwriting:** gets worse when small. 2 of 6 names were misspelled at "low" and 1 at "tiny" (still all CONFIRM).
+- **No size ever produced a wrong OK.**
+
+That's why the app doesn't shrink by default: it only shrinks when the network forces it. Three photos is a small test; week 2 will repeat it on the full test set.
+
+Bug found while testing: a 60-second timeout was too short (this model can take 2–3 minutes), and a 504 error crashed the app instead of retrying. Both are fixed.
+
+51 tests pass.
+
 ## Next
 
 **Week 1**
 1. ~~Timing parse~~ and 2. ~~Schedule card~~: done on Day 2.
 2b. ~~Pharmacist confirm step~~: done on Day 3.
-3. Low-network mode: compress photos hard, retry on failure, cache the medicine list and past results, and fall back to a text-only answer.
+3. ~~Low-network mode~~: done on Day 4.
 4. Voice: read the card aloud in the person's language (Hindi, Odia, English first).
-5. RAG over medicine leaflets: short, plain answers to "what is this for?" with sources.
+5. RAG over medicine leaflets: short, plain answers to "what is this for?" with sources. Shown only for printed strips/boxes (handwritten: only after a pharmacist confirms). Never shows the leaflet's dose.
 6. A bigger medicine list (the full Indian brand list and Jan Aushadhi), so new photos aren't matched against a list tuned on these ones.
 
 **Week 2**

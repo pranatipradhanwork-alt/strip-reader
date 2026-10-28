@@ -25,7 +25,7 @@ def photo_key(path: str | Path, profile: str) -> str:
 
 
 def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | None = None,
-        profile: str = "low") -> dict:
+        profile: str = "normal") -> dict:
     medicines = load_medicines(ROOT / "data" / "medicines.csv")
     all_items, per_image, offline = [], [], False
     for path in images:
@@ -102,8 +102,9 @@ def main() -> None:
     load_dotenv(ROOT / ".env")
     p = argparse.ArgumentParser(description="Read medicine strips, boxes and prescriptions.")
     p.add_argument("images", nargs="*")
-    p.add_argument("--network", default="low", choices=list(PROFILES),
-                   help="upload size: normal, low (default, ~80 KB) or tiny (~40 KB, grey)")
+    p.add_argument("--network", default="normal", choices=list(PROFILES),
+                   help="starting upload size: normal (default), low (~80 KB) or tiny (~40 KB, grey); "
+                        "it steps down by itself if the upload keeps failing")
     p.add_argument("--flush-queue", action="store_true", help="read the photos saved while offline")
     p.add_argument("--no-crops", action="store_true", help="smallest card: no label pictures")
     p.add_argument("--out", default=str(ROOT / "out"), help="folder for crops and result.json")
