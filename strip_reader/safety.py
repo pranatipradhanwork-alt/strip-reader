@@ -108,8 +108,14 @@ class CheckedItem:
     timing_note: str | None = None
     crop_path: str | None = None
     status: str = "confirm"          # "ok" or "confirm"
-    reasons: list[str] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)   # English detail, for the pharmacist
+    codes: list[str] = field(default_factory=list)     # same reasons as codes, translated on the card
     message: str = CONFIRM_MSG
+
+    def add(self, code: str, text: str) -> None:
+        self.reasons.append(text)
+        if code not in self.codes:
+            self.codes.append(code)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -151,29 +157,27 @@ def check_item(raw: dict, medicines: list[Medicine]) -> CheckedItem:
         box_2d=raw.get("box_2d"),
     )
 
-    reasons = []
     if conf < MIN_CONFIDENCE:
-        reasons.append(f"low reading confidence ({conf:.2f})")
+        item.add("low_confidence", f"low reading confidence ({conf:.2f})")
     if source == "handwritten":
-        reasons.append("handwritten text")
+        item.add("handwritten", "handwritten text")
     if source == "unknown":
-        reasons.append("could not tell if text was printed or handwritten")
+        item.add("source_unknown", "could not tell if text was printed or handwritten")
     if m.score < MATCH_MAYBE:
-        reasons.append("name not found in the medicine list")
+        item.add("name_not_found", "name not found in the medicine list")
     elif m.score < MATCH_OK:
-        reasons.append(f"name only a partial match to '{m.name}' ({m.score}%)")
+        item.add("name_partial", f"name only a partial match to '{m.name}' ({m.score}%)")
     if strength_note:
-        reasons.append(strength_note)
+        item.add("strength_missing", strength_note)
     if strength is None:
-        reasons.append("strength not clearly printed")
+        item.add("strength_missing", "strength not clearly printed")
 
     if timing and source != "printed_prescription":
         # Strips and boxes don't carry a personal dose. Text here is a pharmacy
         # sticker, a pen mark, or handwriting, so it is shown but never trusted.
         item.timing_note = "Timing not from a printed prescription. " + CONFIRM_MSG
 
-    item.reasons = reasons
-    if not reasons:
+    if not item.reasons:
         item.status = "ok"
         item.message = "Read clearly and found in the medicine list."
     return item
@@ -189,9 +193,9 @@ def cross_check(items: list[CheckedItem]) -> None:
     for i in items:
         if i.source == "handwritten" and i.generic:
             if i.generic in printed:
-                i.reasons.append(f"agrees with a printed strip/box ({i.generic})")
+                i.add("agrees_printed", f"agrees with a printed strip/box ({i.generic})")
             else:
-                i.reasons.append("no printed strip/box seen that agrees")
+                i.add("no_printed_agrees", "no printed strip/box seen that agrees")
 
 
 def merge_same_medicine(raws: list[dict], medicines: list[Medicine]) -> list[dict]:

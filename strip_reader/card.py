@@ -11,29 +11,27 @@ and why, so the pharmacist can check it quickly.
 from __future__ import annotations
 
 import base64
+import json
 import html
 import io
 from pathlib import Path
 
 from .timing import parse_timing
 
-LABELS = {
-    "en": {"title": "Your medicines today", "morning": "Morning", "afternoon": "Afternoon",
-           "evening": "Evening", "night": "Night", "as_needed": "Only when needed",
-           "ask": "Ask your pharmacist first", "none": "Nothing here",
-           "after food": "after food", "before food": "before food", "with food": "with food",
-           "days": "for {n} days", "footer": "This card is a reading aid, not medical advice."},
-    "hi": {"title": "आज की दवाइयाँ", "morning": "सुबह", "afternoon": "दोपहर", "evening": "शाम",
-           "night": "रात", "as_needed": "ज़रूरत होने पर ही", "ask": "पहले फार्मासिस्ट से पूछें",
-           "none": "कुछ नहीं", "after food": "खाने के बाद", "before food": "खाने से पहले",
-           "with food": "खाने के साथ", "days": "{n} दिन तक",
-           "footer": "यह कार्ड पढ़ने में मदद के लिए है, डॉक्टर की सलाह नहीं।"},
-    "or": {"title": "ଆଜିର ଔଷଧ", "morning": "ସକାଳ", "afternoon": "ମଧ୍ୟାହ୍ନ", "evening": "ସନ୍ଧ୍ୟା",
-           "night": "ରାତି", "as_needed": "ଆବଶ୍ୟକ ହେଲେ ହିଁ", "ask": "ପ୍ରଥମେ ଫାର୍ମାସିଷ୍ଟଙ୍କୁ ପଚାରନ୍ତୁ",
-           "none": "କିଛି ନାହିଁ", "after food": "ଖାଇବା ପରେ", "before food": "ଖାଇବା ପୂର୍ବରୁ",
-           "with food": "ଖାଇବା ସହିତ", "days": "{n} ଦିନ ପାଇଁ",
-           "footer": "ଏହି କାର୍ଡ ପଢ଼ିବାରେ ସାହାଯ୍ୟ ପାଇଁ, ଡାକ୍ତରୀ ପରାମର୍ଶ ନୁହେଁ।"},
-}
+I18N_DIR = Path(__file__).resolve().parent.parent / "data" / "i18n"
+LANGS = sorted(f.stem for f in I18N_DIR.glob("*.json"))
+
+
+def labels(lang: str) -> dict:
+    """Card text for one language. Any missing phrase falls back to English."""
+    en = json.loads((I18N_DIR / "en.json").read_text(encoding="utf-8"))
+    path = I18N_DIR / f"{lang}.json"
+    tr = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    out = {**en, **tr}
+    out["reasons"] = {**en["reasons"], **tr.get("reasons", {})}
+    return out
+
+
 SLOT_ORDER = ("morning", "afternoon", "evening", "night")
 
 
@@ -47,19 +45,22 @@ def build_schedule(result: dict) -> dict:
             entry = {"name": _name(i),
                      "strength": i["strength"], "crop": i.get("crop_path"),
                      "timing": t.to_dict() if t else None}
-            why = []
+            why, codes = [], []
             if i["status"] != "ok":
                 why += i["reasons"] or [i["message"]]
+                codes += i.get("codes") or []
             if t is None:
-                why.append("no timing written")
+                why.append("no timing written"); codes.append("no_timing")
             elif i.get("timing_note"):
-                why.append("timing not from a printed prescription")
+                why.append("timing not from a printed prescription"); codes.append("timing_not_printed_rx")
             elif not t.sure:
-                why.append("timing not clear: " + ", ".join(t.unclear) if t.unclear
-                           else "times of day not written")
+                if t.unclear:
+                    why.append("timing not clear: " + ", ".join(t.unclear)); codes.append("timing_unclear")
+                else:
+                    why.append("times of day not written"); codes.append("times_not_written")
             if why:
-                entry["read_timing"] = t.summary() if t else None
-                entry["why"] = why
+                entry["why"] = why            # English detail for the pharmacist
+                entry["why_codes"] = codes    # translated on the card
                 sched["ask"].append(entry)
                 continue
             if t.as_needed and not t.slots:
@@ -82,8 +83,35 @@ def _with_strength(name: str, strength: str | None) -> str:
     return name if digits and digits in name else f"{name} {strength}"
 
 
+def timing_summary(t: dict | None, L: dict) -> str | None:
+    """What was read, in the card's language."""
+    if not t:
+        return None
+    amt = lambda v: {0.5: "½", 0.25: "¼"}.get(v, f"{v:g}")
+    parts = []
+    if t.get("as_needed"):
+        parts.append(L["as_needed"] + (f" ({t['reason']})" if t.get("reason") else ""))
+    if t.get("slots"):
+        parts.append(", ".join(f"{amt(v)} {L[k]}" for k, v in t["slots"].items() if v))
+    elif t.get("per_day"):
+        parts.append(L["times_a_day"].format(n=amt(t["per_day"])))
+    if t.get("food"):
+        parts.append(L[t["food"]])
+    if t.get("days"):
+        parts.append(L["days"].format(n=t["days"]))
+    return "; ".join(parts) or L["reasons"]["timing_unclear"]
+
+
+def why_text(e: dict, L: dict) -> str:
+    seen = []
+    for c in e.get("why_codes", []):
+        if c in L["reasons"] and L["reasons"][c] not in seen:
+            seen.append(L["reasons"][c])
+    return "; ".join(seen)
+
+
 def card_text(sched: dict, lang: str = "en") -> str:
-    L = LABELS[lang]
+    L = labels(lang)
     lines = [f"===== {L['title']} ====="]
     for key in (*SLOT_ORDER, "as_needed"):
         if key == "evening" and not sched[key]:
@@ -98,9 +126,12 @@ def card_text(sched: dict, lang: str = "en") -> str:
         lines.append(f"  - {L['none']}")
     for e in sched["ask"]:
         lines.append(f"  - {_with_strength(e['name'], e['strength'])}")
-        if e.get("read_timing"):
-            lines.append(f"      read: {e['read_timing']}")
-        lines.append(f"      why : {'; '.join(e['why'])}")
+        read = timing_summary(e["timing"], L)
+        if read:
+            lines.append(f"      {L['read']} {read}")
+        lines.append(f"      → {why_text(e, L)}")
+    if sched["ask"]:
+        lines.append(f"\n{L['confirm']}")
     lines.append(f"\n{L['footer']}")
     return "\n".join(lines)
 
@@ -136,7 +167,7 @@ def _img_tag(path: str | None) -> str:
 
 def card_html(sched: dict, lang: str = "en") -> str:
     """One self-contained HTML file: big text, high contrast, crops inline."""
-    L = LABELS[lang]
+    L = labels(lang)
     icons = {"morning": "☀️", "afternoon": "🌤️", "evening": "🌇", "night": "🌙", "as_needed": "⏱️"}
     esc = html.escape
     sections = []
@@ -146,11 +177,15 @@ def card_html(sched: dict, lang: str = "en") -> str:
         rows = "".join(f"<li>{esc(_line(e, L))}{_img_tag(e['crop'])}</li>" for e in sched[key]) \
             or f'<li class="none">{esc(L["none"])}</li>'
         sections.append(f'<section><h2>{icons[key]} {esc(L[key])}</h2><ul>{rows}</ul></section>')
-    ask_rows = "".join(
-        f"<li><b>{esc(_with_strength(e['name'], e['strength']))}</b>"
-        + (f"<div class='read'>read: {esc(e['read_timing'])}</div>" if e.get("read_timing") else "")
-        + f"<div class='why'>{esc('; '.join(e['why']))}</div>{_img_tag(e['crop'])}</li>"
-        for e in sched["ask"]) or f'<li class="none">{esc(L["none"])}</li>'
+    def ask_row(e):
+        read = timing_summary(e["timing"], L)
+        return (f"<li><b>{esc(_with_strength(e['name'], e['strength']))}</b>"
+                + (f"<div class='read'>{esc(L['read'])} {esc(read)}</div>" if read else "")
+                + f"<div class='why'>{esc(why_text(e, L))}</div>{_img_tag(e['crop'])}"
+                + f"<details><summary>details</summary>{esc('; '.join(e['why']))}</details></li>")
+    ask_rows = "".join(ask_row(e) for e in sched["ask"]) or f'<li class="none">{esc(L["none"])}</li>'
+    if sched["ask"]:
+        ask_rows += f"<li class='confirm'>{esc(L['confirm'])}</li>"
     sections.append(f'<section class="ask"><h2>⚠️ {esc(L["ask"])}</h2><ul>{ask_rows}</ul></section>')
     return f"""<!doctype html>
 <html lang="{lang}"><head><meta charset="utf-8">
@@ -172,6 +207,8 @@ li.none {{ color:var(--muted); }}
 .ask h2 {{ color:var(--warn); }}
 .why, .read {{ font-size:17px; color:var(--muted); }}
 .crop {{ display:block; max-width:100%; max-height:90px; margin-top:6px; border:1px solid var(--line); border-radius:6px; }}
+details {{ font-size:14px; color:var(--muted); margin-top:4px; }}
+li.confirm {{ font-weight:600; color:var(--warn); border-bottom:none; }}
 footer {{ margin-top:24px; font-size:16px; color:var(--muted); }}
 </style></head>
 <body><main><h1>{esc(L['title'])}</h1>{''.join(sections)}

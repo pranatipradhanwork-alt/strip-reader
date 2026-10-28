@@ -100,15 +100,27 @@ Every run now also writes `schedule.json` and `card.html`: one light, phone-size
 
 **On the 12 real photos** every prescription was handwritten, so the card correctly put every medicine under "Ask your pharmacist first". This shows the next step clearly: a **pharmacist confirm step**. The pharmacist ticks each item (looking at the crop), and only then does it move into a slot.
 
-29 tests pass (16 safety, 13 timing/card).
+### Languages (multilingual by design)
 
-Known gaps: the "why" notes are still in English on Hindi/Odia cards, and medicine names stay in English (as printed).
+All card text lives in one file per language in `data/i18n/` (`en.json`, `hi.json`, `or.json`). Every safety reason has a short code (`handwritten`, `name_not_found`, …), so the card shows it in the person's language. The English detail stays in `result.json` and in a small "details" fold for the pharmacist.
+
+| Language | Status |
+|---|---|
+| English | source |
+| Odia | checked by a native speaker (Pranati, 28 Oct); 4 newer phrases listed under `_unchecked` |
+| Hindi | draft, not yet checked by a native speaker |
+
+**Adding a language:** copy `en.json` to `<code>.json`, translate the values (Gemini can draft them), have a native speaker check them, and list anything unchecked under `_unchecked`. There's no code change, and the tests make sure no phrase or `{n}` placeholder is missing. The safety messages are never translated live by an LLM: fixed, checked text can't drift, and it works offline.
+
+Medicine names stay as printed (usually English).
+
+33 tests pass.
 
 ## Next
 
 **Week 1**
 1. ~~Timing parse~~ and 2. ~~Schedule card~~: done on Day 2.
-2b. Pharmacist confirm step: tick an item to move it into the card; translate the "why" notes.
+2b. Pharmacist confirm step: tick an item to move it into the card. ("Why" notes are now translated.)
 3. Low-network mode: compress photos hard, retry on failure, cache the medicine list and past results, and fall back to a text-only answer.
 4. Voice: read the card aloud in the person's language (Hindi, Odia, English first).
 5. RAG over medicine leaflets: short, plain answers to "what is this for?" with sources.
