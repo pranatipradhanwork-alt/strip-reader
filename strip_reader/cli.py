@@ -9,6 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from .safety import CONFIRM_MSG, check_item, cross_check, load_medicines, merge_same_medicine
+from .card import LABELS, build_schedule, card_html, card_text
 from .vision import crop, load_image, read_image
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -78,13 +79,20 @@ def main() -> None:
     p.add_argument("--out", default=str(ROOT / "out"), help="folder for crops and result.json")
     p.add_argument("--mock", help="use a saved model reply (JSON) instead of calling Gemini")
     p.add_argument("--model", help="Gemini model name (default from GEMINI_MODEL or gemini-3.8-flash)")
+    p.add_argument("--lang", default="en", choices=sorted(LABELS), help="card language: en, hi or or (Odia)")
+    p.add_argument("--quiet", action="store_true", help="print only the schedule card")
     a = p.parse_args()
     out = Path(a.out)
     result = run(a.images, out, a.mock, a.model)
     out.mkdir(parents=True, exist_ok=True)
     (out / "result.json").write_text(json.dumps(result, indent=2, ensure_ascii=False))
-    show(result)
-    print(f"Full result saved to {out / 'result.json'}")
+    sched = build_schedule(result)
+    (out / "schedule.json").write_text(json.dumps(sched, indent=2, ensure_ascii=False))
+    (out / "card.html").write_text(card_html(sched, a.lang), encoding="utf-8")
+    if not a.quiet:
+        show(result)
+    print(card_text(sched, a.lang))
+    print(f"\nSaved: {out / 'result.json'}, {out / 'schedule.json'}, {out / 'card.html'}")
 
 
 if __name__ == "__main__":

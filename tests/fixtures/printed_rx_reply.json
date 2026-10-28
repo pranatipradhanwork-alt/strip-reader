@@ -1,0 +1,8 @@
+{"image_type": "prescription", "image_quality": "good", "items": [
+ {"name_as_printed": "Tab Metformin", "strength": "500 mg", "timing_text": "1-0-1 after food x 30 days", "source": "printed_prescription", "confidence": 0.95, "box_2d": [100, 50, 180, 600]},
+ {"name_as_printed": "Tab Telma", "strength": "40 mg", "timing_text": "1-0-0 before food", "source": "printed_prescription", "confidence": 0.93, "box_2d": [220, 50, 300, 600]},
+ {"name_as_printed": "Tab Atorva", "strength": "10 mg", "timing_text": "HS", "source": "printed_prescription", "confidence": 0.92, "box_2d": [340, 50, 420, 600]},
+ {"name_as_printed": "Tab Dolo 650", "strength": "650 mg", "timing_text": "SOS for fever", "source": "printed_prescription", "confidence": 0.9, "box_2d": [460, 50, 540, 600]},
+ {"name_as_printed": "Tab Pan 40", "strength": "40 mg", "timing_text": "OD before breakfast", "source": "printed_prescription", "confidence": 0.94, "box_2d": [580, 50, 660, 600]},
+ {"name_as_printed": "Glimpride", "strength": "1 mg", "timing_text": "1-0-0", "source": "handwritten", "confidence": 0.6, "box_2d": [700, 50, 780, 600]}
+]}
