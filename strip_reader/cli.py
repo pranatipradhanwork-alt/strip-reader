@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import shutil
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -11,24 +13,44 @@ from dotenv import load_dotenv
 from .safety import CONFIRM_MSG, check_item, cross_check, load_medicines, merge_same_medicine
 from . import confirm
 from .card import LANGS, build_schedule, card_html, card_text
-from .vision import crop, load_image, read_image
+from .vision import PROFILES, OfflineError, crop, load_image, read_image
 
 ROOT = Path(__file__).resolve().parent.parent
+CACHE = ROOT / "out" / "cache"   # Gemini replies by photo content: a photo is never sent twice
+QUEUE = ROOT / "out" / "queue"   # photos taken while offline, read later with --flush-queue
 
 
-def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | None = None) -> dict:
+def photo_key(path: str | Path, profile: str) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16] + f"-{profile}"
+
+
+def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | None = None,
+        profile: str = "normal") -> dict:
     medicines = load_medicines(ROOT / "data" / "medicines.csv")
-    all_items, per_image = [], []
+    all_items, per_image, offline = [], [], False
     for path in images:
         img = load_image(path)
-        cache = out_dir / f"{Path(path).stem}_raw.json"
+        old_cache = out_dir / f"{Path(path).stem}_raw.json"   # Day 1 style, still read
+        cache = CACHE / f"{photo_key(path, profile)}.json"
         if mock:
             raw = json.loads(Path(mock).read_text())
         elif cache.exists():
             raw = json.loads(cache.read_text())
+        elif old_cache.exists():
+            raw = json.loads(old_cache.read_text())
         else:
-            raw = read_image(img, model)
-            cache.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                if offline:
+                    raise OfflineError("network already down")
+                raw = read_image(img, model, profile)
+            except OfflineError:
+                # Keep the photo; never lose it. Stop trying the rest for now.
+                offline = True
+                QUEUE.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, QUEUE / Path(path).name)
+                per_image.append({"image": path, "queued": True, "items": []})
+                continue
+            CACHE.mkdir(parents=True, exist_ok=True)
             cache.write_text(json.dumps(raw, indent=2, ensure_ascii=False))
         items = []
         for n, r in enumerate(merge_same_medicine(raw.get("items", []), medicines), 1):
@@ -51,6 +73,9 @@ def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | 
 
 def show(result: dict) -> None:
     for img in result["images"]:
+        if img.get("queued"):
+            print(f"\n=== {img['image']}: no network, saved to {QUEUE} to read later ===")
+            continue
         print(f"\n=== {img['image']}  ({img['image_type']}, photo {img['image_quality']}) ===")
         if not img["items"]:
             print("  No medicine could be read. " + CONFIRM_MSG)
@@ -76,7 +101,12 @@ def show(result: dict) -> None:
 def main() -> None:
     load_dotenv(ROOT / ".env")
     p = argparse.ArgumentParser(description="Read medicine strips, boxes and prescriptions.")
-    p.add_argument("images", nargs="+")
+    p.add_argument("images", nargs="*")
+    p.add_argument("--network", default="normal", choices=list(PROFILES),
+                   help="starting upload size: normal (default), low (~80 KB) or tiny (~40 KB, grey); "
+                        "it steps down by itself if the upload keeps failing")
+    p.add_argument("--flush-queue", action="store_true", help="read the photos saved while offline")
+    p.add_argument("--no-crops", action="store_true", help="smallest card: no label pictures")
     p.add_argument("--out", default=str(ROOT / "out"), help="folder for crops and result.json")
     p.add_argument("--mock", help="use a saved model reply (JSON) instead of calling Gemini")
     p.add_argument("--model", help="Gemini model name (default from GEMINI_MODEL or gemini-3.8-flash)")
@@ -84,16 +114,30 @@ def main() -> None:
     p.add_argument("--quiet", action="store_true", help="print only the schedule card")
     a = p.parse_args()
     out = Path(a.out)
-    result = run(a.images, out, a.mock, a.model)
+    images = list(a.images)
+    if a.flush_queue:
+        images += sorted(str(f) for f in QUEUE.glob("*") if f.is_file())
+    if not images:
+        p.error("give at least one photo (or --flush-queue)")
+    result = run(images, out, a.mock, a.model, a.network)
+    if a.flush_queue:
+        for img in result["images"]:
+            if not img.get("queued") and Path(img["image"]).parent == QUEUE:
+                Path(img["image"]).unlink(missing_ok=True)   # read now; cached reply kept
     out.mkdir(parents=True, exist_ok=True)
     (out / "result.json").write_text(json.dumps(result, indent=2, ensure_ascii=False))
     sched = build_schedule(result, confirm.load(out / "confirmations.json"))
     (out / "schedule.json").write_text(json.dumps(sched, indent=2, ensure_ascii=False))
-    (out / "card.html").write_text(card_html(sched, a.lang), encoding="utf-8")
+    html_card = card_html(sched, a.lang, crops=not a.no_crops)
+    text_card = card_text(sched, a.lang)
+    (out / "card.html").write_text(html_card, encoding="utf-8")
+    (out / "card.txt").write_text(text_card, encoding="utf-8")
     if not a.quiet:
         show(result)
-    print(card_text(sched, a.lang))
-    print(f"\nSaved: {out / 'result.json'}, {out / 'schedule.json'}, {out / 'card.html'}")
+    print(text_card)
+    kb = lambda t: len(t.encode("utf-8")) / 1024
+    print(f"\nSaved: card.html ({kb(html_card):.0f} KB), card.txt ({kb(text_card):.1f} KB, "
+          f"for SMS/WhatsApp text), result.json, schedule.json in {out}")
 
 
 if __name__ == "__main__":

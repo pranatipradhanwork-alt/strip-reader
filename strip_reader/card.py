@@ -45,6 +45,7 @@ def build_schedule(result: dict, confirmations: dict | None = None) -> dict:
     confirmations = confirmations or {}
     sched = {s: [] for s in SLOT_ORDER}
     sched["as_needed"], sched["ask"] = [], []
+    sched["queued"] = [Path(img["image"]).name for img in result["images"] if img.get("queued")]
     for img in result["images"]:
         for n, i in enumerate(img["items"], 1):
             iid = item_id(img.get("image", "photo"), n)
@@ -134,6 +135,8 @@ def why_text(e: dict, L: dict) -> str:
 def card_text(sched: dict, lang: str = "en") -> str:
     L = labels(lang)
     lines = [f"===== {L['title']} ====="]
+    if sched.get("queued"):
+        lines.append(f"\n!! {L['queued'].format(n=len(sched['queued']))}")
     for key in (*SLOT_ORDER, "as_needed"):
         if key == "evening" and not sched[key]:
             continue
@@ -190,23 +193,26 @@ def _img_tag(path: str | None) -> str:
     return f'<img class="crop" alt="photo of the label" src="data:image/jpeg;base64,{b64}">'
 
 
-def card_html(sched: dict, lang: str = "en") -> str:
+def card_html(sched: dict, lang: str = "en", crops: bool = True) -> str:
     """One self-contained HTML file: big text, high contrast, crops inline."""
     L = labels(lang)
     icons = {"morning": "☀️", "afternoon": "🌤️", "evening": "🌇", "night": "🌙", "as_needed": "⏱️"}
     esc = html.escape
     sections = []
+    _img = _img_tag if crops else (lambda _p: "")
+    if sched.get("queued"):
+        sections.append(f"<p class='queued'>📶 {esc(L['queued'].format(n=len(sched['queued'])))}</p>")
     for key in (*SLOT_ORDER, "as_needed"):
         if key in ("evening", "as_needed") and not sched[key]:
             continue
-        rows = "".join(f"<li>{esc(_line(e, L))}{_img_tag(e['crop'])}</li>" for e in sched[key]) \
+        rows = "".join(f"<li>{esc(_line(e, L))}{_img(e['crop'])}</li>" for e in sched[key]) \
             or f'<li class="none">{esc(L["none"])}</li>'
         sections.append(f'<section><h2>{icons[key]} {esc(L[key])}</h2><ul>{rows}</ul></section>')
     def ask_row(e):
         read = timing_summary(e["timing"], L)
         return (f"<li><b>{esc(_with_strength(e['name'], e['strength']))}</b>"
                 + (f"<div class='read'>{esc(L['read'])} {esc(read)}</div>" if read else "")
-                + f"<div class='why'>{esc(why_text(e, L))}</div>{_img_tag(e['crop'])}"
+                + f"<div class='why'>{esc(why_text(e, L))}</div>{_img(e['crop'])}"
                 + f"<details><summary>details</summary>{esc('; '.join(e['why']))}</details></li>")
     ask_rows = "".join(ask_row(e) for e in sched["ask"]) or f'<li class="none">{esc(L["none"])}</li>'
     if sched["ask"]:
@@ -236,6 +242,7 @@ li.none {{ color:var(--muted); }}
 .crop {{ display:block; max-width:100%; max-height:90px; margin-top:6px; border:1px solid var(--line); border-radius:6px; }}
 details {{ font-size:14px; color:var(--muted); margin-top:4px; }}
 li.confirm {{ font-weight:600; color:var(--warn); border-bottom:none; }}
+.queued {{ background:var(--warnbg); color:var(--warn); padding:10px 14px; border-radius:10px; font-weight:600; }}
 .legend {{ font-size:17px; color:var(--muted); margin:0 0 8px; }}
 footer {{ margin-top:24px; font-size:16px; color:var(--muted); }}
 </style></head>
