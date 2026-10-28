@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 samples/*
 !samples/.gitkeep
+.claude/

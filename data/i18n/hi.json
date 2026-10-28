@@ -1,13 +1,20 @@
 {
   "_language": "Hindi",
   "_checked_by": "not yet checked by a native speaker",
-  "_unchecked": ["*"],
+  "_unchecked": [
+    "*"
+  ],
   "title": "आज की दवाइयाँ",
-  "morning": "सुबह", "afternoon": "दोपहर", "evening": "शाम", "night": "रात",
+  "morning": "सुबह",
+  "afternoon": "दोपहर",
+  "evening": "शाम",
+  "night": "रात",
   "as_needed": "ज़रूरत होने पर ही",
   "ask": "पहले फार्मासिस्ट से पूछें",
   "none": "कुछ नहीं",
-  "after food": "खाने के बाद", "before food": "खाने से पहले", "with food": "खाने के साथ",
+  "after food": "खाने के बाद",
+  "before food": "खाने से पहले",
+  "with food": "खाने के साथ",
   "days": "{n} दिन तक",
   "times_a_day": "दिन में {n} बार",
   "read": "पढ़ा गया:",
@@ -29,5 +36,6 @@
     "timing_unclear": "समय साफ़ नहीं",
     "agrees_printed": "छपी स्ट्रिप से मेल खाता है",
     "no_printed_agrees": "मेल खाती छपी स्ट्रिप नहीं मिली"
-  }
+  },
+  "confirmed_legend": "✓ = फार्मासिस्ट ने जाँचा"
 }
