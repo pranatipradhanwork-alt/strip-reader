@@ -35,5 +35,6 @@
     "agrees_printed": "matches a printed strip",
     "no_printed_agrees": "no printed strip seen that matches"
   },
-  "confirmed_legend": "✓ = checked by a pharmacist"
+  "confirmed_legend": "✓ = checked by a pharmacist",
+  "queued": "No network. {n} photo(s) saved; they will be read when the network is back."
 }

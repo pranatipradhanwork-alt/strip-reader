@@ -6,7 +6,8 @@
     "reasons.source_unknown",
     "reasons.agrees_printed",
     "reasons.no_printed_agrees",
-    "confirmed_legend"
+    "confirmed_legend",
+    "queued"
   ],
   "title": "ଆଜିର ଔଷଧ",
   "morning": "ସକାଳ",
@@ -41,5 +42,6 @@
     "agrees_printed": "ଛପା ଷ୍ଟ୍ରିପ୍ ସହ ମେଳ ଖାଉଛି",
     "no_printed_agrees": "ମେଳ ଖାଉଥିବା ଛପା ଷ୍ଟ୍ରିପ୍ ମିଳିଲା ନାହିଁ"
   },
-  "confirmed_legend": "✓ = ଫାର୍ମାସିଷ୍ଟ ଯାଞ୍ଚ କରିଛନ୍ତି"
+  "confirmed_legend": "✓ = ଫାର୍ମାସିଷ୍ଟ ଯାଞ୍ଚ କରିଛନ୍ତି",
+  "queued": "ନେଟୱାର୍କ ନାହିଁ। {n}ଟି ଫଟୋ ସେଭ୍ ହୋଇଛି, ନେଟୱାର୍କ ଆସିଲେ ପଢ଼ାଯିବ।"
 }
