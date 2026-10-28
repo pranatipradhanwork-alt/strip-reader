@@ -73,11 +73,42 @@ What the run taught us, and what was fixed:
 - **Medicine list:** brands seen in these photos were added (Daxid, Nexpro RD, Ciplar-LA, Rivotril, Eptoin and others). This makes these photos easier than new ones, so week 2 needs a full list and a fresh test set.
 - Photo 1 (a prescription page with no medicines on it) correctly returned nothing.
 
+## Day 2 (28 Oct 2026): timing parse and schedule card
+
+```bash
+python -m strip_reader.cli samples/my_rx.jpg --lang or      # en, hi or or (Odia)
+python -m strip_reader.cli tests/fixtures/printed_rx.png --mock tests/fixtures/printed_rx_reply.json --lang hi   # demo, no key
+```
+
+Every run now also writes `schedule.json` and `card.html`: one light, phone-sized page with big text, an icon per time of day, and a small picture of each label. It is about 25–110 KB, small enough for a weak network.
+
+**Timing parser** (`strip_reader/timing.py`) only uses what is written:
+
+| Written | Understood as | Sure? |
+|---|---|---|
+| `1-0-1`, `½-0-½`, `1-1-1-1`, `১-০-১` (Bengali/Hindi/Odia digits) | exact morning / afternoon / (evening) / night amounts | yes |
+| `after food`, `PC`, `A/C`, `before food` | food timing | yes |
+| `x 5 days`, `for 1 week`, `1 month` | how many days | yes |
+| `HS`, `at bedtime` | night | yes |
+| `before breakfast` / `lunch` / `dinner` | morning / afternoon / night | yes |
+| `SOS for fever` | only when needed (fever) | yes |
+| `OD`, `BD`, `TDS` | count per day only; **the times are not written, so we don't pick them** | no |
+| `BF` | could be "before food" or "breakfast" | no |
+| anything else (`apply`, `as directed`) | listed as unclear | no |
+
+**Card rule:** a medicine goes into a time slot only if its name and strength are OK, the timing comes from a printed prescription, and the parser is sure. Everything else goes under **"Ask your pharmacist first"** with what was read and why.
+
+**On the 12 real photos** every prescription was handwritten, so the card correctly put every medicine under "Ask your pharmacist first". This shows the next step clearly: a **pharmacist confirm step**. The pharmacist ticks each item (looking at the crop), and only then does it move into a slot.
+
+29 tests pass (16 safety, 13 timing/card).
+
+Known gaps: the "why" notes are still in English on Hindi/Odia cards, and medicine names stay in English (as printed).
+
 ## Next
 
 **Week 1**
-1. Timing parse: turn "1-0-1", "BD", "after food" and similar into morning/noon/night slots, only from text that is printed.
-2. Schedule card: one simple picture card per day (morning / afternoon / night) with large text.
+1. ~~Timing parse~~ and 2. ~~Schedule card~~: done on Day 2.
+2b. Pharmacist confirm step: tick an item to move it into the card; translate the "why" notes.
 3. Low-network mode: compress photos hard, retry on failure, cache the medicine list and past results, and fall back to a text-only answer.
 4. Voice: read the card aloud in the person's language (Hindi, Odia, English first).
 5. RAG over medicine leaflets: short, plain answers to "what is this for?" with sources.
