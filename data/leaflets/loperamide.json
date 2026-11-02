@@ -1,0 +1,13 @@
+{
+  "generic": "Loperamide",
+  "us_name": "loperamide",
+  "label_title": "anti diarrheal",
+  "source": "US FDA drug label (openFDA)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=01964f8a-f05c-4f72-9530-e0cffd981ffa",
+  "effective_time": "20250411",
+  "sections": {
+    "uses": "Use controls symptoms of diarrhea, including Travelers’ Diarrhea",
+    "do_not_take_if": "Do not use if you have bloody or black stool",
+    "warnings": "Warnings Allergy alert: Do not use if you have ever had a rash or other allergic reaction to loperamide HCl Heart alert: Taking more than directed can cause serious heart problems or death Do not use if you have bloody or black stool Ask a doctor before use if you have • fever • mucus in the stool • a history of liver disease • a history of abnormal heart rhythm Ask a doctor or pharmacist before use if you are taking a prescription drug. Loperamide may interact with certain prescription drugs. When using this product tiredness, drowsiness or dizziness may occur. Be careful when driving or operating machinery. Stop use and ask a doctor if • symptoms get worse • diarrhea lasts for more than 2 days • you get abdominal swelling or bulging. These may be signs of a serious condition. If pregnant or breast-feeding, ask a health professional before use. Keep out of reach of children. In case of overdose, get medical help or contact a Poison Control Center right away. (1-800-222-1222)"
+  }
+}

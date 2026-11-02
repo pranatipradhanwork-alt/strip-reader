@@ -1,0 +1,14 @@
+{
+  "generic": "Folic Acid",
+  "us_name": "folic acid",
+  "label_title": "Folic Acid",
+  "source": "US FDA drug label (openFDA)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=03b0aee4-804a-de63-e063-6394a90a6635",
+  "effective_time": "20260713",
+  "sections": {
+    "uses": "INDICATIONS AND USAGE Folic acid is effective in the treatment of megaloblastic anemias due to a deficiency of folic acid (as may be seen in tropical or nontropical sprue) and in anemias of nutritional origin, pregnancy, infancy, or childhood.",
+    "do_not_take_if": "CONTRAINDICATIONS Folic acid is contraindicated in patients who have shown previous intolerance to the drug.",
+    "warnings": "WARNING Administration of folic acid alone is improper therapy for pernicious anemia and other megaloblastic anemias in which vitamin B 12 is deficient.",
+    "side_effects": "ADVERSE REACTIONS Allergic sensitization has been reported following both oral and parenteral administration of folic acid. Folic acid is relatively nontoxic in man. Rare instances of allergic responses to folic acid preparations have been reported and have included erythema, skin rash, itching, general malaise, and respiratory difficulty due to bronchospasm. One patient experienced symptoms suggesting anaphylaxis following injection of the drug. Gastrointestinal side effects, including anorexia, nausea, abdominal distention, flatulence, and a bitter or bad taste, have been reported in patients receiving 15 mg folic acid daily for 1 month. Other side effects reported in patients receiving 15 mg daily include altered sleep patterns, difficulty in concentrating, irritability, overactivity, excitement, mental depression, confusion, and impaired judgment. Decreased vitamin B 12 serum levels may occur in patients receiving prolonged folic acid therapy. In an uncontrolled study, orally administered folic acid was reported to increase the incidence of seizures in some epileptic patients receiving phenobarbital, primidone, or diphenylhydantoin. Another investigator reported decreased diphenylhydantoin serum levels in folate-deficient patients receiving diphenylhydantoin who were treated with 5 mg or 15 mg of folic acid daily."
+  }
+}

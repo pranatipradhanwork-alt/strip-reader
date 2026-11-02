@@ -1,0 +1,14 @@
+{
+  "generic": "Ofloxacin",
+  "us_name": "ofloxacin",
+  "label_title": "Ofloxacin",
+  "source": "US FDA drug label (openFDA)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=07ac850b-a983-fc21-e063-6394a90a21b2",
+  "effective_time": "20231023",
+  "sections": {
+    "uses": "INDICATIONS AND USAGE Ofloxacin ophthalmic solution is indicated for the treatment of infections caused by susceptible strains of the following bacteria in the conditions listed below:",
+    "do_not_take_if": "CONTRAINDICATIONS Ofloxacin ophthalmic solution is contraindicated in patients with a history of hypersensitivity to ofloxacin, to other quinolones, or to any of the components in this medication (see WARNINGS ).",
+    "warnings": "WARNINGS NOT FOR INJECTION. Ofloxacin ophthalmic solution should not be injected subconjunctivally, nor should it be introduced directly into the anterior chamber of the eye. There are rare reports of anaphylactic reaction/shock and fatal hypersensitivity reactions in patients receiving systemic quinolones, some following the first dose, including ofloxacin. Some reactions were accompanied by cardiovascular collapse, loss of consciousness, angioedema (including laryngeal, pharyngeal or facial edema), airway obstruction, dyspnea, urticaria, and itching. A rare occurrence of Stevens-Johnson syndrome, which progressed to toxic epidermal necrolysis, has been reported in a patient who was receiving topical ophthalmic ofloxacin. If an allergic reaction to ofloxacin occurs, discontinue the drug. Serious acute hypersensitivity reactions may require immediate emergency treatment. Oxygen and airway management, including intubation should be administered as clinically indicated.",
+    "side_effects": "ADVERSE REACTIONS Ophthalmic use: The most frequently reported drug-related adverse reaction was transient ocular burning or discomfort. Other reported reactions include stinging, redness, itching, chemical conjunctivitis/keratitis, ocular/periocular/facial edema, foreign body sensation, photophobia, blurred vision, tearing, dryness, and eye pain. Rare reports of dizziness and nausea have been received. Refer to WARNINGS for additional adverse reactions. To report SUSPECTED ADVERSE REACTIONS, contact Sentlss at 1--855-473-6847 or FDA at 1-800-FDA-1088 or www.fda.gov/medwatch."
+  }
+}

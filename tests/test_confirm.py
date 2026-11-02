@@ -62,7 +62,7 @@ def test_unconfirmed_stays_in_ask():
 @pytest.fixture
 def client(tmp_path):
     (tmp_path / "result.json").write_text(json.dumps(RESULT))
-    return create_app(tmp_path).test_client(), tmp_path
+    return create_app(tmp_path, uses_fn=None).test_client(), tmp_path
 
 
 def test_page_lists_item(client):
@@ -100,5 +100,5 @@ def test_clear_strip_without_timing_is_shown_for_review(tmp_path):
              "status": "ok", "reasons": [], "codes": [], "source": "printed_strip",
              "timing_text": None, "timing_note": None}
     (tmp_path / "result.json").write_text(json.dumps({"images": [{"image": "img11.jpeg", "items": [strip]}]}))
-    r = create_app(tmp_path).test_client().get("/")
+    r = create_app(tmp_path, uses_fn=None).test_client().get("/")
     assert b"Dolo-650" in r.data

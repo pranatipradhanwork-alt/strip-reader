@@ -1,0 +1,14 @@
+{
+  "generic": "Lactulose",
+  "us_name": "lactulose",
+  "label_title": "Enulose",
+  "source": "US FDA drug label (openFDA)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=00c42c5c-d19e-4130-aa08-a8bbd47d3e5b",
+  "effective_time": "20220601",
+  "sections": {
+    "uses": "INDICATIONS AND USAGE For the prevention and treatment of portal-systemic encephalopathy, including the stages of hepatic pre-coma and coma. Controlled studies have shown that lactulose solution therapy reduces the blood ammonia levels by 25 to 50%; this is generally paralleled by an improvement in the patients' mental state and by an improvement in EEG patterns. The clinical response has been observed in about 75% of patients, which is at least as satisfactory as that resulting from neomycin therapy. An increase in patients' protein tolerance is also frequently observed with lactulose therapy. In the treatment of chronic portal-systemic encephalopathy, Lactulose has been given for over 2 years in controlled studies.",
+    "do_not_take_if": "CONTRAINDICATIONS Since lactulose solution contains galactose (less than 1.6 g/15 mL), it is contraindicated in patients who require a low galactose diet.",
+    "warnings": "WARNINGS A theoretical hazard may exist for patients being treated with lactulose solution who may be required to undergo electrocautery procedures during proctoscopy or colonoscopy. Accumulation of H 2 gas in significant concentration in the presence of an electrical spark may result in an explosive reaction. Although this complication has not been reported with lactulose, patients on lactulose therapy undergoing such procedures should have a thorough bowel cleansing with a non-fermentable solution. Insufflation of CO 2 as an additional safeguard may be pursued but is considered to be a redundant measure.",
+    "side_effects": "ADVERSE REACTIONS Precise frequency data are not available. Lactulose may produce gaseous distention with flatulence or belching and abdominal discomfort such as cramping in about 20% of patients. Excessive dosage can lead to diarrhea with potential complications such as loss of fluids, hypokalemia, and hypernatremia. Nausea and vomiting have been reported. To report SUSPECTED ADVERSE EVENTS, contact the FDA at 1-800-FDA-1088 or http://www.fda.gov/ for voluntary reporting of adverse reactions."
+  }
+}

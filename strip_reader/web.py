@@ -17,10 +17,12 @@ from pathlib import Path
 from flask import Flask, Response, redirect, request
 
 from . import confirm
+from .leaflets import what_its_for
 from .card import LANGS, _img_tag, build_schedule, card_html
 
 
-def create_app(run_dir: str | Path) -> Flask:
+def create_app(run_dir: str | Path, uses_fn=what_its_for) -> Flask:
+    """uses_fn(generic, lang) gives "what it's for"; tests pass None to stay offline."""
     run_dir = Path(run_dir)
     app = Flask(__name__)
     conf_path = run_dir / "confirmations.json"
@@ -81,7 +83,7 @@ def create_app(run_dir: str | Path) -> Flask:
     def card():
         lang = request.args.get("lang", "or")
         lang = lang if lang in LANGS else "en"
-        sched = build_schedule(result(), confirm.load(conf_path))
+        sched = build_schedule(result(), confirm.load(conf_path), (lambda g: uses_fn(g, lang)) if uses_fn else None)
         page = card_html(sched, lang)
         switch = " · ".join(f'<a href="/card?lang={l}">{l}</a>' for l in LANGS)
         bar = f'<nav style="font:16px system-ui;padding:8px 16px">Language: {switch} · <a href="/">← pharmacist review</a></nav>'
