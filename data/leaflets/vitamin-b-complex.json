@@ -1,0 +1,12 @@
+{
+  "generic": "Vitamin B Complex",
+  "us_name": "vitamin b complex",
+  "label_title": "Telomere - DNA",
+  "source": "US FDA drug label (openFDA)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=b093dfba-ed48-47a2-b4ce-f706221935a1",
+  "effective_time": "20221130",
+  "sections": {
+    "uses": "Uses: Temporarily supports the body's ability to maintain or rebuild telomere length, aid cellular function and guard against DNA damage.*",
+    "warnings": "Warnings: Not for use on children. If symptoms continue to recur, or if sleeplessness persists continuously for more than two weeks, consult a physician. I nsomnia may be a symptom of a serious underlying medical illness. As with all medicines, if you are pregnant or breast feeding, consult a health professional before using this product. Keep out of reach of children. In case of overdose, get medical help or contact a Poison Control Center right away. Keep out of reach of children."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "generic": "Sucralfate",
+  "us_name": "sucralfate",
+  "label_title": "Sucralfate",
+  "source": "US FDA drug label (openFDA)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=0206d7fa-a1d5-35d9-e063-6294a90a5eb3",
+  "effective_time": "20250103",
+  "sections": {
+    "uses": "INDICATIONS AND USAGE Sucralfate tablets are indicated in: Short-term treatment (up to 8 weeks) of active duodenal ulcer. While healing with sucralfate may occur during the first week or two, treatment should be continued for 4 to 8 weeks unless healing has been demonstrated by x-ray or endoscopic examination. Maintenance therapy for duodenal ulcer patients at reduced dosage after healing of acute ulcers.",
+    "do_not_take_if": "CONTRAINDICATIONS Sucralfate tablets are contraindicated in patients with known hypersensitivity reactions to the active substance or to any of the excipients.",
+    "side_effects": "ADVERSE REACTIONS Adverse reactions to sucralfate in clinical trials were minor and only rarely led to discontinuation of the drug. In studies involving over 2700 patients treated with sucralfate tablets, adverse effects were reported in 129 (4.7%). Constipation was the most frequent complaint (2%). Other adverse effects reported in less than 0.5% of the patients are listed below by body system: Gastrointestinal: diarrhea, nausea, vomiting, gastric discomfort, indigestion, flatulence, dry mouth Dermatological: pruritus, rash Nervous System: dizziness, insomnia, sleepiness, vertigo Other: back pain, headache Post-marketing : cases of hypersensitivity have been reported with the use of sucralfate tablets, including dyspnea, lip swelling, pruritus, rash, and urticaria. Cases of anaphylactic reactions, bronchospasm, laryngeal edema, edema of the mouth, pharyngeal edema, respiratory tract edema and swelling of the face have been reported with an unknown oral formulation of sucralfate. Bezoars have been reported in patients treated with sucralfate. The majority of patients had underlying medical conditions that may predispose to bezoar formation (such as delayed gastric emptying) or were receiving concomitant enteral tube feedings. Inadvertent injection of insoluble sucralfate and its insoluble excipients has led to fatal complications, including pulmonary and cerebral emboli. Sucralfate is not intended for intravenous administration."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "generic": "Cholecalciferol",
+  "us_name": "cholecalciferol",
+  "label_title": "PNV-DHA",
+  "source": "US FDA drug label (openFDA)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=038fe2e7-dc16-485c-b5fb-746db7231347",
+  "effective_time": "20260723",
+  "sections": {
+    "uses": "INDICATIONS: PNV-DHA is a multivitamin/multimineral fatty acid dietary supplement indicated for use in improving the nutritional status of women throughout pregnancy and in the postnatal period for both lactating and nonlactating mothers.",
+    "do_not_take_if": "CONTRAINDICATIONS: PNV-DHA is contraindicated in patients with a known hypersensitivity to any of the ingredients.",
+    "warnings": "WARNING: Ingestion of more than 3 grams of omega-3 fatty acids (such as DHA) per day has been shown to have potential antithrombotic effects, including an increased bleeding time and International Normalized Ratio (INR). Administration of omega-3 fatty acids should be avoided in patients taking anticoagulants and in those known to have an inherited or acquired predisposition to bleeding. WARNING: Accidental overdose of iron-containing products is a leading cause of fatal poisoning in children under 6. Keep this product out of reach of children. In case of accidental overdose, call a doctor or poison control center immediately.",
+    "side_effects": "ADVERSE REACTIONS: Allergic sensitization has been reported following both oral and parenteral administration of folic acid."
+  }
+}

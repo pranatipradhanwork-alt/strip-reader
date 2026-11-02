@@ -168,6 +168,38 @@ Bug found while testing: a 60-second timeout was too short (this model can take 
 
 51 tests pass.
 
+## Day 5 (2 Nov 2026): "what is this tablet for?" (leaflet RAG)
+
+The card now says what a medicine is used for, in the person's language, from its **real leaflet**:
+
+> **Dolo 650.** Used for: relieves minor aches and pains (headache, cold, toothache…) and reduces fever. *Your doctor may have prescribed it for a different reason.* (source: medicine leaflet)
+
+**How it works (RAG):**
+
+1. **Leaflets** (`scripts/build_leaflets.py`): real label text from the US FDA (openFDA, public domain) for 97 of the 112 generics in our list. Indian names are mapped to US names (Paracetamol → acetaminophen). We keep only uses, warnings, "do not take if" and side effects. **The dosage section is never stored.** The other 15 (e.g. Drotaverine, Domperidone combos) aren't sold in the US; for those the card shows nothing rather than guess.
+2. **Index** (`scripts/build_index.py`): leaflets are split into 558 chunks of about 600 characters and embedded with `gemini-embedding-001` (768-d), saved in `data/leaflets/index.npy`. At this size a plain numpy cosine search is instant; a vector DB server (Chroma/FAISS) would add setup without adding speed.
+3. **Retrieve:** **first filter to that one medicine** (its name was already matched exactly against the medicine list), **then** rank its chunks by vector similarity. An answer can never come from another medicine's leaflet. (Vector search is never used to identify the medicine: similar-looking names can be different drugs.)
+4. **Answer:** Gemini writes one or two plain sentences using only those chunks, in English, Hindi or Odia. It is cached per medicine and language, so it's generated once.
+5. **Dose guard:** any answer that mentions a dose, amount or how often (in English, Hindi or Odia, including Odia/Bengali digits) is thrown away.
+
+**When "Used for" is shown:**
+
+| Item | Shown? |
+|---|---|
+| Printed strip/box, read clearly, in the list | yes |
+| Handwritten | **no**, until a pharmacist confirms the name; then yes |
+| Unsure or partial name | no (a wrong "use" is worse than none) |
+| Medicine with no leaflet | no |
+| No network / no index | no, and the card still works |
+
+A fixed line, *"Your doctor may have prescribed it for a different reason"*, is always added. US leaflets list only officially approved uses. For example, Ondem's leaflet says "nausea from cancer chemotherapy", while Indian doctors often give it for ordinary vomiting.
+
+Tested on the real photos: Dolo 650 and Ondem got correct "Used for" lines in English and Odia; handwritten items got none.
+
+Bugs found while testing: the free embedding limit (100 per minute), and a closed Gemini client. Both are fixed: indexing now waits and retries. If "Used for" fails for any reason, the card still shows without it.
+
+70 tests pass.
+
 ## Next
 
 **Week 1**
@@ -175,7 +207,7 @@ Bug found while testing: a 60-second timeout was too short (this model can take 
 2b. ~~Pharmacist confirm step~~: done on Day 3.
 3. ~~Low-network mode~~: done on Day 4.
 4. Voice: read the card aloud in the person's language (Hindi, Odia, English first).
-5. RAG over medicine leaflets: short, plain answers to "what is this for?" with sources. Shown only for printed strips/boxes (handwritten: only after a pharmacist confirms). Never shows the leaflet's dose.
+5. ~~RAG over medicine leaflets ("what is this for?")~~: done on Day 5. Next: free questions ("can I take it with milk?") using the same index.
 6. A bigger medicine list (the full Indian brand list and Jan Aushadhi), so new photos aren't matched against a list tuned on these ones.
 
 **Week 2**

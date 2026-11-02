@@ -1,0 +1,14 @@
+{
+  "generic": "Ciprofloxacin",
+  "us_name": "ciprofloxacin",
+  "label_title": "ciprofloxacin",
+  "source": "US FDA drug label (openFDA)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=05b2836d-cd3d-4d7f-970c-66ec2d788667",
+  "effective_time": "20220502",
+  "sections": {
+    "uses": "INDICATIONS AND USAGE Ciprofloxacin Ophthalmic Solution is indicated for the treatment of infections caused by susceptible strains of the designated microorganisms in the conditions listed below: Corneal Ulcers: Pseudomonas aeruginosa Serratia marcescens * Staphylococcus aureus Staphylococcus epidermidis Streptococcus pneumoniae Streptococcus (Viridans Group) * Conjunctivitis: Haemophilus influenzae Staphylococcus aureus Staphylococcus epidermidis Streptococcus pneumoniae *Efficacy for this organism was studied in fewer than 10 infections.",
+    "do_not_take_if": "CONTRAINDICATIONS A history of hypersensitivity to ciprofloxacin or any other component of the medication is a contraindication to its use. A history of hypersensitivity to other quinolones may also contraindicate the use of ciprofloxacin.",
+    "warnings": "WARNINGS NOT FOR INJECTION INTO THE EYE. Serious and occasionally fatal hypersensitivity (anaphylactic) reactions, some following the first dose, have been reported in patients receiving systemic quinolone therapy. Some reactions were accompanied by cardiovascular collapse, loss of consciousness, tingling, pharyngeal or facial edema, dyspnea, urticaria, and itching. Only a few patients had a history of hypersensitivity reactions. Serious anaphylactic reactions require immediate emergency treatment with epinephrine and other resuscitation measures, including oxygen, intravenous fluids, intravenous antihistamines, corticosteroids, pressor amines and airway management, as clinically indicated. Remove contact lenses before using.",
+    "side_effects": "ADVERSE REACTIONS The most frequently reported drug related adverse reaction was local burning or discomfort. In corneal ulcer studies with frequent administration of the drug, white crystalline precipitates were seen in approximately 17% of patients ( see Precautions ). Other reactions occurring in less than 10% of patients included lid margin crusting, crystals/scales, foreign body sensation, itching, conjunctival hyperemia and a bad taste following instillation. Additional events occurring in less than 1% of patients included corneal staining, keratopathy/keratitis, allergic reactions, lid edema, tearing, photophobia, corneal infiltrates, nausea and decreased vision. To report SUSPECTED ADVERSE REACTIONS, contact LEADING PHARMA AT 1-844-740-7500 or FDA at 1-800-FDA-1088 or www.fda.gov/medwatch"
+  }
+}

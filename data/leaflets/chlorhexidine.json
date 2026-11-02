@@ -1,0 +1,13 @@
+{
+  "generic": "Chlorhexidine",
+  "us_name": "chlorhexidine",
+  "label_title": "Chlorhexidine Gluconate Solution 0.75% Antiseptic",
+  "source": "US FDA drug label (openFDA)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=014a5f36-0396-498b-901f-9a86df4e11fe",
+  "effective_time": "20221226",
+  "sections": {
+    "uses": "Use healthcare personnel handwash: helps reduce bacteria that potentially can cause disease",
+    "do_not_take_if": "Do not use if you are allergic to chlorhexidine gluconate or any other ingredient in this product",
+    "warnings": "Warnings For external use only Allergy alert: This product may cause a severe allergic reaction. Symptoms may include: wheezing/difficulty breathing shock facial swelling hives rash If an allergic reaction occurs, stop use and seek medical help right away. Do not use if you are allergic to chlorhexidine gluconate or any other ingredient in this product When using this product keep out of eyes, ears, and mouth. May cause serious and permanent eye injury if permitted to enter and remain in the eye or may cause deafness when instilled in the middle ear through perforated eardrums. if solution should contact these areas, rinse out promptly and thoroughly with water do not use routinely if you have wounds which involve more than the superficial layers of the skin Stop use and ask a doctor if irritation, sensitization, or allergic reaction occurs. These may be signs of a serious condition. Keep out of reach of children. If swallowed, get medical help or contact a Poison Control Center right away."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "generic": "Fexofenadine",
+  "us_name": "fexofenadine",
+  "label_title": "Fexofenadine HCL",
+  "source": "US FDA drug label (openFDA)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=00ef8467-30a0-7579-e063-6294a90a75af",
+  "effective_time": "20251219",
+  "sections": {
+    "uses": "Uses reduces hives and relieves itching due to hives (urticaria). This product will not prevent hives or an allergic skin reaction from occurring.",
+    "do_not_take_if": "Do not use  to prevent hives from any known cause such as:  foods  insect stings  medicines  latex or rubber gloves because this product will not stop hives from occurring. Avoiding the cause of your hives is the only way to prevent them. Hives can sometimes be serious. If you do not know the cause of your hives, see your doctor for a medical exam. Your doctor may be able to help you find a cause.  if you have ever had an allergic reaction to this product or any of its ingredients",
+    "warnings": "Severe Allergy Warning: Get emergency help immediately if you have hives along with any of the following symptoms:  trouble swallowing  dizziness or loss of consciousness  swelling of tongue  swelling in or around mouth  trouble speaking  wheezing or problems breathing  drooling These symptoms may be signs of anaphylactic shock. This condition can be life threatening if not treated by a health professional immediately. Symptoms of anaphylactic shock may occur when hives first appear or up to a few hours later Not a Substitute for Epinephrine. If your doctor has prescribed an epinephrine injector for “anaphylaxis” or severe allergy symptoms that could occur with your hives, never use this product as a substitute for the epinephrine injector. If you have been prescribed an epinephrine injector, you should carry it with you at all times."
+  }
+}

@@ -36,13 +36,19 @@ def labels(lang: str) -> dict:
 SLOT_ORDER = ("morning", "afternoon", "evening", "night")
 
 
-def build_schedule(result: dict, confirmations: dict | None = None) -> dict:
+def build_schedule(result: dict, confirmations: dict | None = None, uses_fn=None) -> dict:
     """Sort every item into a slot, 'as needed', or 'ask'.
 
     `confirmations` (from the pharmacist page) can move an item onto the card
     or remove it as "not a medicine". See confirm.py.
+
+    `uses_fn(generic)` returns "what it's for" from the leaflet (leaflets.py).
+    It is only asked for medicines whose name we trust: printed and read
+    clearly (status "ok"), or confirmed by a pharmacist. Never for an unsure
+    or handwritten name, because the wrong "use" is worse than none.
     """
     confirmations = confirmations or {}
+    uses = uses_fn or (lambda g: None)
     sched = {s: [] for s in SLOT_ORDER}
     sched["as_needed"], sched["ask"] = [], []
     sched["queued"] = [Path(img["image"]).name for img in result["images"] if img.get("queued")]
@@ -56,13 +62,16 @@ def build_schedule(result: dict, confirmations: dict | None = None) -> dict:
                 t = parse_timing(c["timing_text"])
                 entry = {"id": iid, "name": c["name"], "strength": c["strength"],
                          "crop": i.get("crop_path"), "timing": t.to_dict(),
-                         "confirmed_by": c["by"], "confirmed_at": c["at"]}
+                         "confirmed_by": c["by"], "confirmed_at": c["at"],
+                         "uses": uses(_trusted_generic(c["name"]))}
                 _place(sched, entry, t)
                 continue
             t = parse_timing(i.get("timing_text"))
+            trusted = i["status"] == "ok" and i.get("source") != "handwritten"
             entry = {"id": iid, "name": _name(i),
                      "strength": i["strength"], "crop": i.get("crop_path"),
-                     "timing": t.to_dict() if t else None}
+                     "timing": t.to_dict() if t else None,
+                     "uses": uses(i.get("generic")) if trusted else None}
             why, codes = [], []
             if i["status"] != "ok":
                 why += i["reasons"] or [i["message"]]
@@ -83,6 +92,13 @@ def build_schedule(result: dict, confirmations: dict | None = None) -> dict:
                 continue
             _place(sched, entry, t)
     return sched
+
+
+def _trusted_generic(name: str) -> str | None:
+    """Generic for a pharmacist-typed name, only if it is a sure list match."""
+    from .safety import MATCH_OK, load_medicines, match_name
+    m = match_name(name, load_medicines(Path(__file__).resolve().parent.parent / "data" / "medicines.csv"))
+    return m.generic if m.score >= MATCH_OK else None
 
 
 def _place(sched: dict, entry: dict, t) -> None:
@@ -145,6 +161,8 @@ def card_text(sched: dict, lang: str = "en") -> str:
             lines.append(f"  - {L['none']}")
         for e in sched[key]:
             lines.append("  - " + _line(e, L))
+            if e.get("uses"):
+                lines.append(f"      {L['used_for']} {e['uses']['text']} {L['uses_note']}")
     lines.append(f"\n{L['ask']}:")
     if not sched["ask"]:
         lines.append(f"  - {L['none']}")
@@ -153,6 +171,8 @@ def card_text(sched: dict, lang: str = "en") -> str:
         read = timing_summary(e["timing"], L)
         if read:
             lines.append(f"      {L['read']} {read}")
+        if e.get("uses"):
+            lines.append(f"      {L['used_for']} {e['uses']['text']} {L['uses_note']}")
         lines.append(f"      → {why_text(e, L)}")
     if any(e.get("confirmed_by") for k in (*SLOT_ORDER, "as_needed") for e in sched[k]):
         lines.append(f"\n{L['confirmed_legend']}")
@@ -180,6 +200,16 @@ def _line(e: dict, L: dict) -> str:
     return " ".join(bits)
 
 
+def _uses_html(e: dict, L: dict) -> str:
+    u = e.get("uses")
+    if not u:
+        return ""
+    esc = html.escape
+    return (f"<div class='uses'><b>{esc(L['used_for'])}</b> {esc(u['text'])} "
+            f"<a href='{esc(u['source_url'])}'>{esc(L['source_short'])}</a>"
+            f"<div class='why'>{esc(L['uses_note'])}</div></div>")
+
+
 def _img_tag(path: str | None) -> str:
     if not path or not Path(path).exists():
         return ""
@@ -205,13 +235,14 @@ def card_html(sched: dict, lang: str = "en", crops: bool = True) -> str:
     for key in (*SLOT_ORDER, "as_needed"):
         if key in ("evening", "as_needed") and not sched[key]:
             continue
-        rows = "".join(f"<li>{esc(_line(e, L))}{_img(e['crop'])}</li>" for e in sched[key]) \
+        rows = "".join(f"<li>{esc(_line(e, L))}{_uses_html(e, L)}{_img(e['crop'])}</li>" for e in sched[key]) \
             or f'<li class="none">{esc(L["none"])}</li>'
         sections.append(f'<section><h2>{icons[key]} {esc(L[key])}</h2><ul>{rows}</ul></section>')
     def ask_row(e):
         read = timing_summary(e["timing"], L)
         return (f"<li><b>{esc(_with_strength(e['name'], e['strength']))}</b>"
                 + (f"<div class='read'>{esc(L['read'])} {esc(read)}</div>" if read else "")
+                + _uses_html(e, L)
                 + f"<div class='why'>{esc(why_text(e, L))}</div>{_img(e['crop'])}"
                 + f"<details><summary>details</summary>{esc('; '.join(e['why']))}</details></li>")
     ask_rows = "".join(ask_row(e) for e in sched["ask"]) or f'<li class="none">{esc(L["none"])}</li>'
@@ -243,6 +274,8 @@ li.none {{ color:var(--muted); }}
 details {{ font-size:14px; color:var(--muted); margin-top:4px; }}
 li.confirm {{ font-weight:600; color:var(--warn); border-bottom:none; }}
 .queued {{ background:var(--warnbg); color:var(--warn); padding:10px 14px; border-radius:10px; font-weight:600; }}
+.uses {{ font-size:18px; margin-top:4px; }}
+.uses a {{ font-size:14px; color:var(--muted); }}
 .legend {{ font-size:17px; color:var(--muted); margin:0 0 8px; }}
 footer {{ margin-top:24px; font-size:16px; color:var(--muted); }}
 </style></head>

@@ -7,7 +7,10 @@
     "reasons.agrees_printed",
     "reasons.no_printed_agrees",
     "confirmed_legend",
-    "queued"
+    "queued",
+    "used_for",
+    "source_short",
+    "uses_note"
   ],
   "title": "ଆଜିର ଔଷଧ",
   "morning": "ସକାଳ",
@@ -43,5 +46,8 @@
     "no_printed_agrees": "ମେଳ ଖାଉଥିବା ଛପା ଷ୍ଟ୍ରିପ୍ ମିଳିଲା ନାହିଁ"
   },
   "confirmed_legend": "✓ = ଫାର୍ମାସିଷ୍ଟ ଯାଞ୍ଚ କରିଛନ୍ତି",
-  "queued": "ନେଟୱାର୍କ ନାହିଁ। {n}ଟି ଫଟୋ ସେଭ୍ ହୋଇଛି, ନେଟୱାର୍କ ଆସିଲେ ପଢ଼ାଯିବ।"
+  "queued": "ନେଟୱାର୍କ ନାହିଁ। {n}ଟି ଫଟୋ ସେଭ୍ ହୋଇଛି, ନେଟୱାର୍କ ଆସିଲେ ପଢ଼ାଯିବ।",
+  "used_for": "ବ୍ୟବହାର:",
+  "source_short": "(ଉତ୍ସ: ଔଷଧ ଲିଫଲେଟ୍)",
+  "uses_note": "ଆପଣଙ୍କ ଡାକ୍ତର ଅନ୍ୟ କାରଣ ପାଇଁ ମଧ୍ୟ ଦେଇଥାଇପାରନ୍ତି।"
 }

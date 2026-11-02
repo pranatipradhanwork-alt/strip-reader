@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 from .safety import CONFIRM_MSG, check_item, cross_check, load_medicines, merge_same_medicine
 from . import confirm
+from .leaflets import what_its_for
 from .card import LANGS, build_schedule, card_html, card_text
 from .vision import PROFILES, OfflineError, crop, load_image, read_image
 
@@ -107,6 +108,7 @@ def main() -> None:
                         "it steps down by itself if the upload keeps failing")
     p.add_argument("--flush-queue", action="store_true", help="read the photos saved while offline")
     p.add_argument("--no-crops", action="store_true", help="smallest card: no label pictures")
+    p.add_argument("--no-uses", action="store_true", help="skip 'what it's for' from leaflets (saves API calls)")
     p.add_argument("--out", default=str(ROOT / "out"), help="folder for crops and result.json")
     p.add_argument("--mock", help="use a saved model reply (JSON) instead of calling Gemini")
     p.add_argument("--model", help="Gemini model name (default from GEMINI_MODEL or gemini-3.8-flash)")
@@ -126,7 +128,8 @@ def main() -> None:
                 Path(img["image"]).unlink(missing_ok=True)   # read now; cached reply kept
     out.mkdir(parents=True, exist_ok=True)
     (out / "result.json").write_text(json.dumps(result, indent=2, ensure_ascii=False))
-    sched = build_schedule(result, confirm.load(out / "confirmations.json"))
+    uses_fn = None if a.no_uses else (lambda g: what_its_for(g, a.lang))
+    sched = build_schedule(result, confirm.load(out / "confirmations.json"), uses_fn)
     (out / "schedule.json").write_text(json.dumps(sched, indent=2, ensure_ascii=False))
     html_card = card_html(sched, a.lang, crops=not a.no_crops)
     text_card = card_text(sched, a.lang)
