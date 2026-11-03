@@ -193,8 +193,10 @@ def _what_its_for(generic, lang, embed_fn, generate_fn):
         context = "\n\n".join(f"[{c['section']}] {c['text']}" for c in chunks)
         prompt = (
             f"Leaflet text for {generic}:\n\"\"\"\n{context}\n\"\"\"\n\n"
-            f"Using ONLY the leaflet text above, say in one or two short, plain sentences what "
+            f"Using ONLY the leaflet text above, say in ONE short sentence (at most 20 words) what "
             f"{generic} is used for, for an elderly reader, in {LANG_NAMES.get(lang, 'English')}. "
+            "Use everyday words a villager would understand; name only the main use or two, and "
+            "skip rare conditions and medical terms. "
             "Do NOT mention any dose, amount, number of tablets, or how often to take it. "
             "Do not add anything that is not in the text. "
             "If the text does not say what it is used for, return found=false.")

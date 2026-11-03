@@ -17,6 +17,7 @@ Many elderly people can't read the small print on a medicine strip or a doctor's
 - **"What is it for?"** from real medicine leaflets (RAG), with the source, and never a dose.
 - **Pharmacist review page:** unsure items are checked against a photo of the label before they reach the card.
 - **Multilingual:** English, Hindi and Odia, from reviewed translation files.
+- **Read aloud:** the card as a small MP3 in the person's language, for users who can't read.
 - **Low-network mode:** shrinks the photo only when the upload fails, queues photos when offline, and offers a ~1 KB text card for SMS/WhatsApp.
 
 ## How it works
@@ -43,6 +44,7 @@ flowchart LR
 | Card | `strip_reader/card.py` | Builds the text and HTML card in the chosen language. |
 | Uses (RAG) | `strip_reader/leaflets.py` | Retrieves the medicine's leaflet text and writes one plain sentence on what it is used for. |
 | Review | `strip_reader/confirm.py`, `web.py` | Pharmacist confirm page (Flask). |
+| Voice | `strip_reader/voice.py` | Builds the spoken script from the card and turns it into MP3. |
 
 ## Safety design
 
@@ -83,7 +85,7 @@ Only what is written is used:
 1. **Leaflets:** official label text from the US FDA (openFDA, public domain) for 97 of the 112 generics in the list. Indian names are mapped to US names (Paracetamol → acetaminophen). Only uses, warnings, contraindications and side effects are kept. **The dosage section is never stored.**
 2. **Index:** 558 chunks (~600 characters each) embedded with `gemini-embedding-001` (768-d) in `data/leaflets/index.npy`.
 3. **Retrieve:** first filter to the one medicine whose name was already verified, then rank that medicine's chunks by cosine similarity. An answer can never come from another medicine's leaflet.
-4. **Generate:** Gemini writes one or two plain sentences from those chunks only, in the card's language, and the answer is cached.
+4. **Generate:** Gemini writes one short sentence in everyday words (at most ~20 words) from those chunks only, in the card's language, and the answer is cached.
 5. **Dose guard:** any answer mentioning a dose, amount or frequency (in any of the three languages) is discarded.
 
 "Used for" is shown only for clearly read printed items, or after a pharmacist confirms a handwritten one. A fixed line is always added: *"Your doctor may have prescribed it for a different reason"*, because labels list only officially approved uses.
@@ -96,6 +98,15 @@ Only what is written is used:
 - The pharmacist's name is required.
 - If any entry is invalid, nothing is saved.
 - Confirmed items appear on the card with a ✓. Each confirmation records who, when and which fields changed, and can be undone.
+
+## Read aloud
+
+`--voice` saves the card as `card.mp3` (or use "read aloud" on the review page).
+
+- **The words are built by code, not by an AI.** The script comes only from the card and the reviewed language files, so the voice can't say a dose or timing that isn't on the card. Gemini's text-to-speech model (`gemini-3.8-flash-lite-tts`) only reads it.
+- "Used for" is said once per medicine. Unsure items are only named under "ask your pharmacist first", never with a dose.
+- The audio is a 32 kbps MP3 (~4 KB per second), cached so the same card is never generated twice. If speech fails, the card still works.
+- **Checked by transcription:** the Odia audio for a 6-medicine demo card was transcribed back to text; it matched the script, and every number (500, 1, 30, 40, 10, 650) was spoken correctly.
 
 ## Low-network mode
 
@@ -165,9 +176,10 @@ python -m strip_reader.web out/run1          # pharmacist review at http://127.0
 | `--flush-queue` | read photos saved while offline |
 | `--no-crops` | smallest HTML card |
 | `--no-uses` | skip "what it's for" (no extra API calls) |
+| `--voice` | also save the card read aloud as `card.mp3` |
 | `--mock reply.json` | use a saved model reply instead of calling Gemini |
 
-Each run writes `result.json`, `schedule.json`, `card.html` and `card.txt` to the output folder.
+Each run writes `result.json`, `schedule.json`, `card.html` and `card.txt` (and `card.mp3` with `--voice`) to the output folder.
 
 Rebuild the leaflet data (optional): `python scripts/build_leaflets.py && python scripts/build_index.py`.
 
@@ -181,6 +193,7 @@ strip_reader/
   card.py        schedule + text / HTML card
   leaflets.py    leaflet RAG and dose guard
   confirm.py     pharmacist confirmation rules
+  voice.py       card -> spoken script -> MP3
   web.py         pharmacist review page (Flask)
   cli.py         command line
 data/
@@ -188,7 +201,7 @@ data/
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py
-tests/           70 tests, no API key needed
+tests/           79 tests, no API key needed
 ```
 
 ## Testing
@@ -208,7 +221,6 @@ All tests run offline with saved model replies, and they run on every push and p
 
 ## Roadmap
 
-- Voice: read the card aloud in the user's language
 - Larger medicine list (full Indian brand list, Jan Aushadhi)
 - Labelled multi-region test set and evaluation report
 - WhatsApp interface: send a photo, get the card and a voice note
