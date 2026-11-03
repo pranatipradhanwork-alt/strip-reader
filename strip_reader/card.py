@@ -206,8 +206,8 @@ def _uses_html(e: dict, L: dict) -> str:
         return ""
     esc = html.escape
     return (f"<div class='uses'><b>{esc(L['used_for'])}</b> {esc(u['text'])} "
-            f"<a href='{esc(u['source_url'])}'>{esc(L['source_short'])}</a>"
-            f"<div class='why'>{esc(L['uses_note'])}</div></div>")
+            f"<a class='src' href='{esc(u['source_url'])}'>{esc(L['source_short'])}</a>"
+            f"<p class='note'>{esc(L['uses_note'])}</p></div>")
 
 
 def _img_tag(path: str | None) -> str:
@@ -223,66 +223,78 @@ def _img_tag(path: str | None) -> str:
     return f'<img class="crop" alt="photo of the label" src="data:image/jpeg;base64,{b64}">'
 
 
-def card_html(sched: dict, lang: str = "en", crops: bool = True, audio: str | None = None) -> str:
-    """One self-contained HTML file: big text, high contrast, crops inline."""
-    L = labels(lang)
-    icons = {"morning": "☀️", "afternoon": "🌤️", "evening": "🌇", "night": "🌙", "as_needed": "⏱️"}
+STYLE = (Path(__file__).resolve().parent / "static" / "style.css").read_text(encoding="utf-8")
+ICONS = {"morning": "☀️", "afternoon": "🌤️", "evening": "🌇", "night": "🌙", "as_needed": "⏱️"}
+
+
+def _med_html(e: dict, L: dict, img) -> str:
+    """One medicine row: amount, name, chips (food / days / reason), used-for, label picture."""
     esc = html.escape
-    sections = []
-    _img = _img_tag if crops else (lambda _p: "")
+    t = e.get("timing") or {}
+    amt = ""
+    if e.get("amount"):
+        a = {0.5: "½", 0.25: "¼"}.get(e["amount"], f"{e['amount']:g}")
+        amt = f"<span class='amt'>{a} ×</span>"
+    tick = " <span class='tick' title='checked by a pharmacist'>✓</span>" if e.get("confirmed_by") else ""
+    chips = []
+    if t.get("reason"):
+        chips.append(t["reason"])
+    if t.get("food"):
+        chips.append(L[t["food"]])
+    if t.get("days"):
+        chips.append(L["days"].format(n=t["days"]))
+    chip_html = ("<div class='chips'>" + "".join(f"<span class='chip'>{esc(c)}</span>" for c in chips)
+                 + "</div>") if chips else ""
+    return (f"<li class='med'><div class='med-main'>{amt}<span class='name'>"
+            f"{esc(_with_strength(e['name'], e['strength']))}</span>{tick}</div>"
+            f"{chip_html}{_uses_html(e, L)}{img(e.get('crop'))}</li>")
+
+
+def card_html(sched: dict, lang: str = "en", crops: bool = True, audio: str | None = None,
+              nav: str = "", actions: str = "") -> str:
+    """One self-contained HTML page (styles inline), so the card can be saved or shared as a file.
+
+    `nav` and `actions` let the web app add its top bar and buttons around the same card.
+    """
+    L = labels(lang)
+    esc = html.escape
+    img = _img_tag if crops else (lambda _p: "")
+    parts = [f"<header class='card-head'><h1>{esc(L['title'])}</h1></header>"]
+    if actions:
+        parts.append(f"<div class='card-actions'>{actions}</div>")
     if audio:
-        sections.append(f"<p class='listen'>🔊 {esc(L['listen'])}<br><audio controls preload='none' "
-                        f"src='{esc(audio)}'></audio></p>")
+        parts.append(f"<div class='listen'>🔊 {esc(L['listen'])}<audio controls preload='none' "
+                     f"src='{esc(audio)}'></audio></div>")
     if sched.get("queued"):
-        sections.append(f"<p class='queued'>📶 {esc(L['queued'].format(n=len(sched['queued'])))}</p>")
+        parts.append(f"<p class='banner banner-warn'>📶 {esc(L['queued'].format(n=len(sched['queued'])))}</p>")
+    if any(e.get("confirmed_by") for k in (*SLOT_ORDER, "as_needed") for e in sched[k]):
+        parts.append(f"<p class='legend'>{esc(L['confirmed_legend'])}</p>")
     for key in (*SLOT_ORDER, "as_needed"):
         if key in ("evening", "as_needed") and not sched[key]:
             continue
-        rows = "".join(f"<li>{esc(_line(e, L))}{_uses_html(e, L)}{_img(e['crop'])}</li>" for e in sched[key]) \
-            or f'<li class="none">{esc(L["none"])}</li>'
-        sections.append(f'<section><h2>{icons[key]} {esc(L[key])}</h2><ul>{rows}</ul></section>')
+        rows = "".join(_med_html(e, L, img) for e in sched[key]) \
+            or f"<li class='med none'>{esc(L['none'])}</li>"
+        parts.append(f"<section class='slot slot-{key}'><h2><span class='ico'>{ICONS[key]}</span>"
+                     f"{esc(L[key])}</h2><ul class='meds'>{rows}</ul></section>")
+
     def ask_row(e):
         read = timing_summary(e["timing"], L)
-        return (f"<li><b>{esc(_with_strength(e['name'], e['strength']))}</b>"
+        return (f"<li class='med'><div class='med-main'><span class='name'>"
+                f"{esc(_with_strength(e['name'], e['strength']))}</span></div>"
                 + (f"<div class='read'>{esc(L['read'])} {esc(read)}</div>" if read else "")
                 + _uses_html(e, L)
-                + f"<div class='why'>{esc(why_text(e, L))}</div>{_img(e['crop'])}"
+                + f"<div class='why'>{esc(why_text(e, L))}</div>{img(e.get('crop'))}"
                 + f"<details><summary>details</summary>{esc('; '.join(e['why']))}</details></li>")
-    ask_rows = "".join(ask_row(e) for e in sched["ask"]) or f'<li class="none">{esc(L["none"])}</li>'
+
     if sched["ask"]:
-        ask_rows += f"<li class='confirm'>{esc(L['confirm'])}</li>"
-    sections.append(f'<section class="ask"><h2>⚠️ {esc(L["ask"])}</h2><ul>{ask_rows}</ul></section>')
-    if any(e.get("confirmed_by") for k in (*SLOT_ORDER, "as_needed") for e in sched[k]):
-        sections.insert(0, f"<p class='legend'>{esc(L['confirmed_legend'])}</p>")
+        rows = "".join(ask_row(e) for e in sched["ask"])
+        parts.append(f"<section class='slot ask'><h2><span class='ico'>⚠️</span>{esc(L['ask'])}</h2>"
+                     f"<ul class='meds'>{rows}</ul><p class='confirm-line'>{esc(L['confirm'])}</p></section>")
+    parts.append(f"<p class='card-foot'>{esc(L['footer'])}</p>")
     return f"""<!doctype html>
 <html lang="{lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f766e">
 <title>Medicine Card</title>
-<style>
-:root {{ --bg:#fffdf7; --fg:#111; --muted:#555; --line:#ddd; --warn:#b54708; --warnbg:#fff4e5; }}
-@media (prefers-color-scheme: dark) {{ :root {{ --bg:#141414; --fg:#f2f2f2; --muted:#aaa; --line:#333; --warn:#ffb86b; --warnbg:#2a1d0e; }} }}
-body {{ margin:0; padding:16px; background:var(--bg); color:var(--fg);
-        font:22px/1.45 system-ui, -apple-system, "Noto Sans", "Noto Sans Oriya", sans-serif; }}
-main {{ max-width:640px; margin:0 auto; }}
-h1 {{ font-size:30px; margin:0 0 12px; }}
-h2 {{ font-size:26px; margin:20px 0 8px; }}
-section {{ border-top:2px solid var(--line); }}
-ul {{ list-style:none; padding:0; margin:0; }}
-li {{ padding:10px 0; border-bottom:1px solid var(--line); }}
-li.none {{ color:var(--muted); }}
-.ask {{ background:var(--warnbg); border-radius:12px; padding:4px 14px; margin-top:20px; border-top:none; }}
-.ask h2 {{ color:var(--warn); }}
-.why, .read {{ font-size:17px; color:var(--muted); }}
-.crop {{ display:block; max-width:100%; max-height:90px; margin-top:6px; border:1px solid var(--line); border-radius:6px; }}
-details {{ font-size:14px; color:var(--muted); margin-top:4px; }}
-li.confirm {{ font-weight:600; color:var(--warn); border-bottom:none; }}
-.queued {{ background:var(--warnbg); color:var(--warn); padding:10px 14px; border-radius:10px; font-weight:600; }}
-.uses {{ font-size:18px; margin-top:4px; }}
-.uses a {{ font-size:14px; color:var(--muted); }}
-.listen {{ font-size:20px; font-weight:600; margin:0 0 8px; }}
-.listen audio {{ width:100%; margin-top:6px; }}
-.legend {{ font-size:17px; color:var(--muted); margin:0 0 8px; }}
-footer {{ margin-top:24px; font-size:16px; color:var(--muted); }}
-</style></head>
-<body><main><h1>{esc(L['title'])}</h1>{''.join(sections)}
-<footer>{esc(L['footer'])}</footer></main></body></html>"""
+<style>{STYLE}</style></head>
+<body>{nav}<main class="wrap">{''.join(parts)}</main></body></html>"""

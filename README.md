@@ -10,6 +10,7 @@ Many elderly people can't read the small print on a medicine strip or a doctor's
 
 ## Features
 
+- **Mobile web app:** take or choose a photo, pick English / हिन्दी / ଓଡ଼ିଆ, and get the card with "read aloud" and a pharmacist check, with big text, light and dark mode, and no app install.
 - **Reads strips, boxes and prescriptions** with a vision LLM (Gemini) into structured data: name, strength, timing, printed vs handwritten, confidence and the region it was read from.
 - **Verifies every name** against a medicine list of Indian generics and brands (brand → generic).
 - **Abstains when unsure:** low confidence, handwriting, unknown names or missing strengths all lead to *"Please confirm with a pharmacist or doctor."*
@@ -43,6 +44,7 @@ flowchart LR
 | Timing | `strip_reader/timing.py` | Turns written timing into a schedule, only where it is explicit. |
 | Card | `strip_reader/card.py` | Builds the text and HTML card in the chosen language. |
 | Uses (RAG) | `strip_reader/leaflets.py` | Retrieves the medicine's leaflet text and writes one plain sentence on what it is used for. |
+| App | `strip_reader/app.py` | Mobile web app: photo upload, language choice, card, read aloud. |
 | Review | `strip_reader/confirm.py`, `web.py` | Pharmacist confirm page (Flask). |
 | Voice | `strip_reader/voice.py` | Builds the spoken script from the card and turns it into MP3. |
 
@@ -156,7 +158,13 @@ pip install -r requirements.txt
 cp .env.example .env            # add your GEMINI_API_KEY
 ```
 
-Try it **without an API key** (uses a saved model reply):
+Run the **web app** (open http://127.0.0.1:5060; "Try a sample prescription" works without an API key):
+
+```bash
+python -m strip_reader.app                     # add --host 0.0.0.0 to open it from a phone on the same Wi-Fi
+```
+
+Or use the command line. Try it **without an API key** (uses a saved model reply):
 
 ```bash
 python -m strip_reader.cli tests/fixtures/printed_rx.png --mock tests/fixtures/printed_rx_reply.json --lang hi --no-uses
@@ -194,14 +202,16 @@ strip_reader/
   leaflets.py    leaflet RAG and dose guard
   confirm.py     pharmacist confirmation rules
   voice.py       card -> spoken script -> MP3
-  web.py         pharmacist review page (Flask)
+  app.py         web app: upload photo -> card, read aloud, pharmacist check (Flask)
+  web.py         card + pharmacist review pages
+  static/        style.css (shared by the app and the saved card)
   cli.py         command line
 data/
   medicines.csv  generics and brands
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py
-tests/           79 tests, no API key needed
+tests/           87 tests, no API key needed
 ```
 
 ## Testing

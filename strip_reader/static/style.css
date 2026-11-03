@@ -1,0 +1,226 @@
+/* Strip Reader: one stylesheet for the app, the card and the pharmacist page.
+   Big readable text, calm health colours, light and dark mode, no web fonts
+   (phones already have Noto fonts for Odia and Hindi; nothing extra to download). */
+
+:root {
+  --bg: #f4f7f6;
+  --surface: #ffffff;
+  --ink: #0f1f1b;
+  --muted: #5a6b66;
+  --line: #e2e8e6;
+  --brand: #0f766e;
+  --brand-strong: #0b5f58;
+  --brand-ink: #ffffff;
+  --brand-soft: #e3f3f0;
+  --warn: #9a3f07;
+  --warn-soft: #fff3e3;
+  --warn-line: #f6d4ad;
+  --ok: #067647;
+  --err: #b42318;
+  --morning: #f59e0b;
+  --afternoon: #0ea5e9;
+  --evening: #f97316;
+  --night: #6366f1;
+  --as-needed: #64748b;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(15, 31, 27, .06), 0 4px 16px rgba(15, 31, 27, .06);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1513;
+    --surface: #15201d;
+    --ink: #eaf2ef;
+    --muted: #9cb0aa;
+    --line: #263431;
+    --brand: #2dd4bf;
+    --brand-strong: #5eead4;
+    --brand-ink: #062a26;
+    --brand-soft: #123a35;
+    --warn: #fdba74;
+    --warn-soft: #2a1d10;
+    --warn-line: #5c3a16;
+    --ok: #4ade80;
+    --err: #fda4af;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 18px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans", "Noto Sans Oriya",
+        "Noto Sans Devanagari", sans-serif;
+}
+a { color: var(--brand); }
+img { max-width: 100%; }
+.wrap { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 5;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar .wrap { display: flex; align-items: center; gap: 12px; padding-top: 10px; padding-bottom: 10px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); text-decoration: none; white-space: nowrap; font-size: 17px; }
+.brand-mark {
+  width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--brand); color: var(--brand-ink); font-size: 18px;
+}
+.spacer { flex: 1; }
+
+/* language switch */
+.langs { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.langs a {
+  text-decoration: none; color: var(--muted); padding: 4px 12px; border-radius: 999px; font-size: 15px; font-weight: 600;
+}
+.langs a[aria-current="true"] { background: var(--brand); color: var(--brand-ink); }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 12px 20px; border-radius: 14px; border: 1px solid transparent;
+  font: inherit; font-weight: 700; text-decoration: none; cursor: pointer;
+}
+.btn-primary { background: var(--brand); color: var(--brand-ink); }
+.btn-primary:hover { background: var(--brand-strong); }
+.btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn-block { width: 100%; }
+.btn-big { min-height: 72px; font-size: 22px; border-radius: 18px; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-row .btn { flex: 1 1 160px; }
+.btn .i { font-size: 1.15em; line-height: 1; }
+
+/* ---------- home ---------- */
+.hero { text-align: center; padding: 28px 4px 8px; }
+.hero h1 { font-size: 32px; line-height: 1.2; margin: 0 0 10px; }
+.hero p { color: var(--muted); margin: 0 auto; max-width: 30em; }
+.upload { margin-top: 24px; }
+.upload input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.previews { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 12px 0 0; }
+.previews img { width: 72px; height: 72px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); }
+.or { text-align: center; color: var(--muted); margin: 14px 0; font-size: 15px; }
+.steps { display: grid; gap: 10px; margin: 28px 0 8px; padding: 0; list-style: none; counter-reset: s; }
+.steps li {
+  counter-increment: s; display: flex; gap: 12px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px;
+}
+.steps li::before {
+  content: counter(s); flex: none; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); font-weight: 800;
+}
+.note { font-size: 15px; color: var(--muted); text-align: center; margin: 20px 0; }
+
+/* loading overlay */
+.loading {
+  position: fixed; inset: 0; z-index: 20; display: none; place-items: center; text-align: center;
+  background: color-mix(in srgb, var(--bg) 92%, transparent); padding: 24px;
+}
+.loading.on { display: grid; }
+.spinner {
+  width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px;
+  border: 6px solid var(--brand-soft); border-top-color: var(--brand); animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+/* ---------- medicine card ---------- */
+.card-head { padding: 8px 0 4px; }
+.card-head h1 { font-size: 30px; line-height: 1.2; margin: 0; }
+.card-actions { margin: 14px 0 6px; }
+.listen {
+  background: var(--brand-soft); border-radius: var(--radius); padding: 14px; margin: 12px 0;
+  font-weight: 700; font-size: 20px;
+}
+.listen audio { display: block; width: 100%; margin-top: 8px; }
+.banner { border-radius: var(--radius); padding: 14px 16px; margin: 12px 0; font-weight: 600; }
+.banner-warn { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-line); }
+.legend { font-size: 15px; color: var(--muted); margin: 8px 0 0; }
+
+.slot {
+  --accent: var(--brand);
+  background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--accent);
+  border-radius: var(--radius); box-shadow: var(--shadow); margin: 14px 0; padding: 4px 16px 8px;
+}
+.slot-morning { --accent: var(--morning); }
+.slot-afternoon { --accent: var(--afternoon); }
+.slot-evening { --accent: var(--evening); }
+.slot-night { --accent: var(--night); }
+.slot-as_needed { --accent: var(--as-needed); }
+.slot h2 { display: flex; align-items: center; gap: 10px; font-size: 24px; margin: 12px 0 4px; }
+.slot h2 .ico { font-size: 26px; }
+.meds { list-style: none; margin: 0; padding: 0; }
+.med { padding: 12px 0; border-top: 1px solid var(--line); }
+.med:first-child { border-top: none; }
+.med.none { color: var(--muted); font-size: 17px; }
+.med-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.amt {
+  flex: none; min-width: 44px; text-align: center; font-weight: 800; font-size: 20px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--ink);
+  border-radius: 10px; padding: 2px 8px;
+}
+.name { font-size: 22px; font-weight: 700; }
+.tick { color: var(--ok); font-weight: 800; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.chip {
+  font-size: 15px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--line); color: var(--ink);
+}
+.uses { font-size: 17px; margin-top: 8px; }
+.uses .src { font-size: 13px; color: var(--muted); }
+.uses .note { text-align: left; margin: 2px 0 0; font-size: 14px; }
+.crop { display: block; max-height: 84px; margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; }
+
+.slot.ask { --accent: var(--warn); background: var(--warn-soft); border-color: var(--warn-line); border-left-color: var(--warn); }
+.slot.ask h2 { color: var(--warn); }
+.why, .read { font-size: 15px; color: var(--muted); margin-top: 4px; }
+details { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.confirm-line { font-weight: 700; color: var(--warn); padding: 10px 0 4px; }
+.card-foot { font-size: 14px; color: var(--muted); text-align: center; margin: 22px 0 8px; }
+
+/* ---------- pharmacist page ---------- */
+.review-top {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin: 12px 0;
+}
+.review-top h1 { font-size: 24px; margin: 0 0 4px; }
+.review-top p { margin: 0 0 12px; color: var(--muted); font-size: 16px; }
+.field label, .grid label { display: block; font-size: 14px; font-weight: 700; color: var(--muted); }
+.field input, .grid input {
+  width: 100%; margin-top: 4px; padding: 10px 12px; font: inherit; font-size: 17px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink);
+}
+.item {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px; margin: 12px 0; box-shadow: var(--shadow);
+}
+.item.is-done { border-color: var(--ok); }
+.item-head { font-size: 16px; margin-bottom: 6px; }
+.item-head b { font-size: 19px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 10px 0; }
+.choices { display: flex; gap: 8px; flex-wrap: wrap; }
+.choices label {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--bg); font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.choices input { accent-color: var(--brand); }
+.done { color: var(--ok); font-weight: 700; margin: 6px 0; }
+.done button { margin-left: 8px; font: inherit; font-size: 14px; padding: 4px 10px; border-radius: 8px; }
+.err { color: var(--err); font-weight: 700; margin: 4px 0; }
+
+@media (max-width: 420px) {
+  body { font-size: 17px; }
+  .langs a { padding: 4px 9px; font-size: 14px; }
+  .topbar .wrap { gap: 8px; }
+  .hero h1 { font-size: 28px; }
+  .name { font-size: 20px; }
+}
+@media print {
+  .topbar, .card-actions, .listen, details { display: none !important; }
+  .slot { box-shadow: none; break-inside: avoid; }
+}

@@ -1,10 +1,10 @@
-"""Pharmacist review page.
+"""Web pages: the medicine card, the pharmacist review page, and the shared top bar.
 
-Run:  python -m strip_reader.web out/real/all      (the folder with result.json)
-Open: http://127.0.0.1:5050
+Two ways to run:
+  python -m strip_reader.app                 the full app (upload a photo -> card)   see app.py
+  python -m strip_reader.web out/run1        review one finished run (CLI output)
 
-The pharmacist sees every item the app was unsure about, with the picture of
-the label, fixes what's wrong, and confirms it. The card is rebuilt each time.
+Both use `Run` below, so the card and the review page behave the same.
 """
 
 from __future__ import annotations
@@ -17,98 +17,110 @@ from pathlib import Path
 from flask import Flask, Response, redirect, request
 
 from . import confirm
+from .card import LANGS, _img_tag, build_schedule, card_html, labels
+from .card import STYLE
 from .leaflets import what_its_for
 from .voice import speak
-from .card import LANGS, _img_tag, build_schedule, card_html
+
+LANG_LABELS = {"en": "English", "hi": "हिन्दी", "or": "ଓଡ଼ିଆ"}
 
 
-def create_app(run_dir: str | Path, uses_fn=what_its_for, speak_fn=speak) -> Flask:
-    """uses_fn(generic, lang) gives "what it's for"; tests pass None to stay offline."""
-    run_dir = Path(run_dir)
-    app = Flask(__name__)
-    conf_path = run_dir / "confirmations.json"
+class Run:
+    """One reading: a folder with result.json (+ confirmations.json, audio)."""
 
-    def result() -> dict:
-        return json.loads((run_dir / "result.json").read_text(encoding="utf-8"))
+    def __init__(self, run_dir: str | Path):
+        self.dir = Path(run_dir)
+        self.conf_path = self.dir / "confirmations.json"
 
-    def items():
-        for img in result()["images"]:
+    def result(self) -> dict:
+        return json.loads((self.dir / "result.json").read_text(encoding="utf-8"))
+
+    def items(self):
+        for img in self.result()["images"]:
             for n, i in enumerate(img["items"], 1):
                 yield confirm.item_id(img["image"], n), i
 
-    def ask_ids() -> set:
-        """Items that are not on the card yet: the ones the pharmacist should see."""
-        sched = build_schedule(result(), confirm.load(conf_path))
-        return {e["id"] for e in sched["ask"]}
+    def confirmations(self) -> dict:
+        return confirm.load(self.conf_path)
 
-    def rebuild() -> None:
-        sched = build_schedule(result(), confirm.load(conf_path))
-        (run_dir / "schedule.json").write_text(json.dumps(sched, indent=2, ensure_ascii=False))
+    def schedule(self, lang: str = "en", uses_fn=None) -> dict:
+        return build_schedule(self.result(), self.confirmations(),
+                              (lambda g: uses_fn(g, lang)) if uses_fn else None)
 
-    @app.get("/")
-    def review():
-        return _page(list(items()), confirm.load(conf_path), errors={}, form={}, ask=ask_ids())
+    def ask_ids(self) -> set:
+        """Items not on the card yet: the ones the pharmacist should see."""
+        return {e["id"] for e in self.schedule()["ask"]}
 
-    @app.post("/")
-    def save():
-        confs = confirm.load(conf_path)
-        all_items = dict(items())
+    def save_review(self, form) -> tuple[dict, dict]:
+        """Validate every pharmacist entry; save only if all are valid. Returns (errors, forms)."""
+        confs = self.confirmations()
         errors, forms = {}, {}
-        for iid, item in all_items.items():
-            form = {k: request.form.get(f"{iid}|{k}", "") for k in ("action", "name", "strength", "timing_text")}
-            form["by"] = request.form.get("by", "")
-            forms[iid] = form
-            if form["action"] in ("", "leave"):
+        for iid, item in self.items():
+            f = {k: form.get(f"{iid}|{k}", "") for k in ("action", "name", "strength", "timing_text")}
+            f["by"] = form.get("by", "")
+            forms[iid] = f
+            if f["action"] in ("", "leave"):
                 continue
-            rec, errs = confirm.validate(item, form)
+            rec, errs = confirm.validate(item, f)
             if errs:
                 errors[iid] = errs
             elif rec:
                 confs[iid] = rec
-        if errors:
-            # Save nothing until every entry is valid, so nothing half-checked reaches the card.
-            return _page(list(all_items.items()), confirm.load(conf_path), errors, forms, ask_ids()), 400
-        confirm.save(conf_path, confs)
-        rebuild()
-        return redirect("/card")
+        if not errors:   # nothing half-checked ever reaches the card
+            confirm.save(self.conf_path, confs)
+        return errors, forms
 
-    @app.post("/undo/<path:iid>")
-    def undo(iid):
-        confs = confirm.load(conf_path)
+    def undo(self, iid: str) -> None:
+        confs = self.confirmations()
         confs.pop(iid, None)
-        confirm.save(conf_path, confs)
-        rebuild()
-        return redirect("/")
+        confirm.save(self.conf_path, confs)
 
-    @app.get("/card")
-    def card():
-        lang = request.args.get("lang", "or")
-        lang = lang if lang in LANGS else "en"
-        sched = build_schedule(result(), confirm.load(conf_path), (lambda g: uses_fn(g, lang)) if uses_fn else None)
-        audio = None
-        if request.args.get("voice") and speak_fn:
-            if speak_fn(sched, lang, run_dir / f"card-{lang}.mp3"):
-                audio = f"/audio/card-{lang}.mp3"
-        page = card_html(sched, lang, audio=audio)
-        switch = " · ".join(f'<a href="/card?lang={l}">{l}</a>' for l in LANGS)
-        bar = (f'<nav style="font:16px system-ui;padding:8px 16px">Language: {switch} · '
-               f'<a href="/card?lang={lang}&voice=1">🔊 read aloud</a> · <a href="/">← pharmacist review</a></nav>')
-        return Response(page.replace("<body>", "<body>" + bar, 1), mimetype="text/html")
-
-    @app.get("/audio/<name>")
-    def audio_file(name):
-        f = run_dir / Path(name).name          # no paths outside the run folder
-        if not (f.suffix == ".mp3" and f.exists()):
-            return Response(status=404)
-        return Response(f.read_bytes(), mimetype="audio/mpeg")
-
-    return app
+    def audio_path(self, name: str) -> Path | None:
+        f = self.dir / Path(name).name          # never a path outside the run folder
+        return f if f.suffix == ".mp3" and f.exists() else None
 
 
-def _page(items: list, confs: dict, errors: dict, form: dict, ask: set) -> str:
+# ---------- shared page pieces ----------
+
+def topbar(lang: str, lang_href, right: str = "") -> str:
+    """Brand + language switch. lang_href(code) gives the link for each language."""
     esc = html.escape
+    langs = "".join(
+        f"<a href='{esc(lang_href(code))}' aria-current='{str(code == lang).lower()}'>{LANG_LABELS.get(code, code)}</a>"
+        for code in LANGS)
+    return (f"<header class='topbar'><div class='wrap'><a class='brand' href='/'><span class='brand-mark'>💊</span>"
+            f"Strip Reader</a><span class='spacer'></span>{right}<nav class='langs'>{langs}</nav></div></header>")
+
+
+def page(title: str, body: str, lang: str = "en", bar: str = "") -> str:
+    return (f"<!doctype html><html lang='{lang}'><head><meta charset='utf-8'>"
+            f"<meta name='viewport' content='width=device-width, initial-scale=1'>"
+            f"<meta name='theme-color' content='#0f766e'><title>{html.escape(title)}</title>"
+            f"<style>{STYLE}</style></head><body>{bar}<main class='wrap'>{body}</main></body></html>")
+
+
+def card_page(run: Run, lang: str, base: str, voice: bool, uses_fn, speak_fn) -> str:
+    """The card with the app's top bar and buttons. `base` is the URL prefix of this run."""
+    L = labels(lang)
+    esc = html.escape
+    sched = run.schedule(lang, uses_fn)
+    audio = None
+    if voice and speak_fn and speak_fn(sched, lang, run.dir / f"card-{lang}.mp3"):
+        audio = f"{base}/audio/card-{lang}.mp3"
+    actions = (f"<div class='btn-row'>"
+               f"<a class='btn btn-primary' href='{esc(base)}/card?lang={lang}&voice=1'><span class='i'>🔊</span>{esc(L['read_aloud'])}</a>"
+               f"<a class='btn btn-ghost' href='/?lang={lang}'><span class='i'>📷</span>{esc(L['new_photo'])}</a>"
+               f"<a class='btn btn-ghost' href='{esc(base)}/review?lang={lang}'><span class='i'>🧑‍⚕️</span>{esc(L['pharmacist'])}</a></div>")
+    bar = topbar(lang, lambda c: f"{base}/card?lang={c}")
+    return card_html(sched, lang, audio=audio, nav=bar, actions=actions)
+
+
+def review_page(run: Run, base: str, lang: str = "en", errors=None, form=None) -> str:
+    esc = html.escape
+    errors, form = errors or {}, form or {}
+    confs, ask = run.confirmations(), run.ask_ids()
     rows = []
-    for iid, i in items:
+    for iid, i in run.items():
         c = confs.get(iid)
         if iid not in ask and not c:
             continue  # already on the card; nothing for the pharmacist to do
@@ -118,8 +130,8 @@ def _page(items: list, confs: dict, errors: dict, form: dict, ask: set) -> str:
         status = ""
         if c:
             label = "confirmed" if c["action"] == "confirm" else "marked not a medicine"
-            status = (f"<div class='done'>✓ {label} by {esc(c['by'])}"
-                      f"<button formaction='/undo/{esc(iid)}' formmethod='post' formnovalidate>undo</button></div>")
+            status = (f"<div class='done'>✓ {label} by {esc(c['by'])}<button formaction='{esc(base)}/undo/{esc(iid)}' "
+                      f"formmethod='post' formnovalidate>undo</button></div>")
         err = "".join(f"<div class='err'>{esc(e)}</div>" for e in errors.get(iid, []))
         why = "; ".join(i.get("reasons") or [])
         opts = "".join(
@@ -127,8 +139,9 @@ def _page(items: list, confs: dict, errors: dict, form: dict, ask: set) -> str:
             f"{' checked' if (f.get('action') or 'leave') == a else ''}> {t}</label>"
             for a, t in (("leave", "leave for doctor"), ("confirm", "confirm"), ("not_medicine", "not a medicine")))
         rows.append(f"""
-<fieldset class='{"is-done" if c else ""}'>
-  <legend>{esc(iid)}: read as <b>{esc(i.get('name_as_read') or '?')}</b> ({esc(i.get('source', ''))}, confidence {i.get('confidence', 0):.2f})</legend>
+<section class='item {"is-done" if c else ""}'>
+  <div class='item-head'>Read as <b>{esc(i.get('name_as_read') or '?')}</b>
+    <span class='why'>· {esc(i.get('source', ''))} · confidence {i.get('confidence', 0):.2f}</span></div>
   {_img_tag(i.get('crop_path'))}
   <div class='why'>{esc(why)}</div>
   {status}{err}
@@ -137,42 +150,64 @@ def _page(items: list, confs: dict, errors: dict, form: dict, ask: set) -> str:
     <label>Strength <input name='{esc(iid)}|strength' placeholder='e.g. 500 mg' value='{val("strength", c.get("strength") if c else i.get("strength"))}'></label>
     <label>Timing <input name='{esc(iid)}|timing_text' placeholder='e.g. 1-0-1 after food x 5 days' value='{val("timing_text", c.get("timing_text") if c else i.get("timing_text"))}'></label>
   </div>
-  <div class='actions'>{opts}</div>
-</fieldset>""")
-    body = "".join(rows) or "<p>Nothing to check. Every item was read clearly.</p>"
+  <div class='choices'>{opts}</div>
+</section>""")
+    body_rows = "".join(rows) or "<p class='note'>Nothing to check. Every item was read clearly.</p>"
     by = esc(next((v.get("by") for v in form.values() if v.get("by")), ""))
-    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>Pharmacist Review</title>
-<style>
-:root {{ --bg:#fafafa; --fg:#111; --muted:#666; --line:#ddd; --ok:#067647; --err:#b42318; --card:#fff; }}
-@media (prefers-color-scheme: dark) {{ :root {{ --bg:#111; --fg:#eee; --muted:#aaa; --line:#333; --ok:#47cd89; --err:#f97066; --card:#1b1b1b; }} }}
-body {{ margin:0; padding:16px; background:var(--bg); color:var(--fg); font:16px/1.45 system-ui, sans-serif; }}
-main {{ max-width:760px; margin:0 auto; }}
-fieldset {{ background:var(--card); border:1px solid var(--line); border-radius:10px; margin:0 0 14px; padding:12px 14px; }}
-fieldset.is-done {{ border-color:var(--ok); }}
-legend {{ padding:0 6px; }}
-.crop {{ display:block; max-width:100%; max-height:120px; border:1px solid var(--line); border-radius:6px; margin:4px 0; }}
-.why {{ color:var(--muted); font-size:14px; }}
-.done {{ color:var(--ok); font-weight:600; margin:6px 0; }}
-.done button {{ margin-left:8px; }}
-.err {{ color:var(--err); font-weight:600; }}
-.grid {{ display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px; margin:8px 0; }}
-.grid input, .top input {{ width:100%; box-sizing:border-box; padding:8px; font:inherit; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); }}
-.actions label {{ margin-right:14px; white-space:nowrap; }}
-.top {{ position:sticky; top:0; background:var(--bg); padding:8px 0 12px; border-bottom:1px solid var(--line); margin-bottom:12px; }}
-button {{ font:inherit; padding:8px 14px; border-radius:6px; }}
-</style></head><body><main>
-<form method="post">
-<div class="top">
-  <h1 style="margin:0 0 6px;font-size:22px">Pharmacist review</h1>
-  <p style="margin:0 0 8px;color:var(--muted)">Check each label picture. Fix anything wrong, then pick "confirm". Only confirmed items go on the card.</p>
-  <label>Your name <input name="by" value="{by}" required></label>
-  <p style="margin:8px 0 0"><button type="submit">Save and show card</button> <a href="/card">see card</a></p>
+    body = f"""<form method="post" action="{esc(base)}/review">
+<div class="review-top">
+  <h1>Pharmacist check</h1>
+  <p>Look at each label picture. Fix anything wrong, then choose "confirm". Only confirmed items go on the card.</p>
+  <div class="field"><label>Your name <input name="by" value="{by}" required></label></div>
+  <div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" type="submit">Save and show card</button>
+  <a class="btn btn-ghost" href="{esc(base)}/card?lang={lang}">See card</a></div>
 </div>
-{body}
-</form></main></body></html>"""
+{body_rows}
+</form>"""
+    return page("Pharmacist check", body, "en", topbar(lang, lambda c: f"{base}/review?lang={c}"))
+
+
+# ---------- single-run app (python -m strip_reader.web out/run1) ----------
+
+def create_app(run_dir: str | Path, uses_fn=what_its_for, speak_fn=speak) -> Flask:
+    """Review one finished run. uses_fn / speak_fn = None keeps tests offline."""
+    run = Run(run_dir)
+    app = Flask(__name__)
+
+    def lang_arg(default="or"):
+        lang = request.args.get("lang", default)
+        return lang if lang in LANGS else "en"
+
+    @app.get("/")
+    @app.get("/review")
+    def review():
+        return review_page(run, "", lang_arg())
+
+    @app.post("/")
+    @app.post("/review")
+    def save():
+        errors, forms = run.save_review(request.form)
+        if errors:
+            return review_page(run, "", lang_arg(), errors, forms), 400
+        return redirect("/card")
+
+    @app.post("/undo/<path:iid>")
+    def undo(iid):
+        run.undo(iid)
+        return redirect("/")
+
+    @app.get("/card")
+    def card():
+        return card_page(run, lang_arg(), "", bool(request.args.get("voice")), uses_fn, speak_fn)
+
+    @app.get("/audio/<name>")
+    def audio_file(name):
+        f = run.audio_path(name)
+        return Response(f.read_bytes(), mimetype="audio/mpeg") if f else Response(status=404)
+
+    return app
 
 
 if __name__ == "__main__":
-    run = sys.argv[1] if len(sys.argv) > 1 else "out/real/all"
-    create_app(run).run(host="127.0.0.1", port=5050, debug=False)
+    folder = sys.argv[1] if len(sys.argv) > 1 else "out/real/all"
+    create_app(folder).run(host="127.0.0.1", port=5050, debug=False)
