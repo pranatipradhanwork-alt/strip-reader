@@ -223,13 +223,16 @@ def _img_tag(path: str | None) -> str:
     return f'<img class="crop" alt="photo of the label" src="data:image/jpeg;base64,{b64}">'
 
 
-def card_html(sched: dict, lang: str = "en", crops: bool = True) -> str:
+def card_html(sched: dict, lang: str = "en", crops: bool = True, audio: str | None = None) -> str:
     """One self-contained HTML file: big text, high contrast, crops inline."""
     L = labels(lang)
     icons = {"morning": "☀️", "afternoon": "🌤️", "evening": "🌇", "night": "🌙", "as_needed": "⏱️"}
     esc = html.escape
     sections = []
     _img = _img_tag if crops else (lambda _p: "")
+    if audio:
+        sections.append(f"<p class='listen'>🔊 {esc(L['listen'])}<br><audio controls preload='none' "
+                        f"src='{esc(audio)}'></audio></p>")
     if sched.get("queued"):
         sections.append(f"<p class='queued'>📶 {esc(L['queued'].format(n=len(sched['queued'])))}</p>")
     for key in (*SLOT_ORDER, "as_needed"):
@@ -276,6 +279,8 @@ li.confirm {{ font-weight:600; color:var(--warn); border-bottom:none; }}
 .queued {{ background:var(--warnbg); color:var(--warn); padding:10px 14px; border-radius:10px; font-weight:600; }}
 .uses {{ font-size:18px; margin-top:4px; }}
 .uses a {{ font-size:14px; color:var(--muted); }}
+.listen {{ font-size:20px; font-weight:600; margin:0 0 8px; }}
+.listen audio {{ width:100%; margin-top:6px; }}
 .legend {{ font-size:17px; color:var(--muted); margin:0 0 8px; }}
 footer {{ margin-top:24px; font-size:16px; color:var(--muted); }}
 </style></head>

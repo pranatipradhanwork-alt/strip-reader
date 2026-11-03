@@ -18,10 +18,11 @@ from flask import Flask, Response, redirect, request
 
 from . import confirm
 from .leaflets import what_its_for
+from .voice import speak
 from .card import LANGS, _img_tag, build_schedule, card_html
 
 
-def create_app(run_dir: str | Path, uses_fn=what_its_for) -> Flask:
+def create_app(run_dir: str | Path, uses_fn=what_its_for, speak_fn=speak) -> Flask:
     """uses_fn(generic, lang) gives "what it's for"; tests pass None to stay offline."""
     run_dir = Path(run_dir)
     app = Flask(__name__)
@@ -84,10 +85,22 @@ def create_app(run_dir: str | Path, uses_fn=what_its_for) -> Flask:
         lang = request.args.get("lang", "or")
         lang = lang if lang in LANGS else "en"
         sched = build_schedule(result(), confirm.load(conf_path), (lambda g: uses_fn(g, lang)) if uses_fn else None)
-        page = card_html(sched, lang)
+        audio = None
+        if request.args.get("voice") and speak_fn:
+            if speak_fn(sched, lang, run_dir / f"card-{lang}.mp3"):
+                audio = f"/audio/card-{lang}.mp3"
+        page = card_html(sched, lang, audio=audio)
         switch = " · ".join(f'<a href="/card?lang={l}">{l}</a>' for l in LANGS)
-        bar = f'<nav style="font:16px system-ui;padding:8px 16px">Language: {switch} · <a href="/">← pharmacist review</a></nav>'
+        bar = (f'<nav style="font:16px system-ui;padding:8px 16px">Language: {switch} · '
+               f'<a href="/card?lang={lang}&voice=1">🔊 read aloud</a> · <a href="/">← pharmacist review</a></nav>')
         return Response(page.replace("<body>", "<body>" + bar, 1), mimetype="text/html")
+
+    @app.get("/audio/<name>")
+    def audio_file(name):
+        f = run_dir / Path(name).name          # no paths outside the run folder
+        if not (f.suffix == ".mp3" and f.exists()):
+            return Response(status=404)
+        return Response(f.read_bytes(), mimetype="audio/mpeg")
 
     return app
 

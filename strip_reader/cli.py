@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from .safety import CONFIRM_MSG, check_item, cross_check, load_medicines, merge_same_medicine
 from . import confirm
 from .leaflets import what_its_for
+from .voice import speak
 from .card import LANGS, build_schedule, card_html, card_text
 from .vision import PROFILES, OfflineError, crop, load_image, read_image
 
@@ -108,6 +109,7 @@ def main() -> None:
                         "it steps down by itself if the upload keeps failing")
     p.add_argument("--flush-queue", action="store_true", help="read the photos saved while offline")
     p.add_argument("--no-crops", action="store_true", help="smallest card: no label pictures")
+    p.add_argument("--voice", action="store_true", help="also save the card read aloud as card.mp3")
     p.add_argument("--no-uses", action="store_true", help="skip 'what it's for' from leaflets (saves API calls)")
     p.add_argument("--out", default=str(ROOT / "out"), help="folder for crops and result.json")
     p.add_argument("--mock", help="use a saved model reply (JSON) instead of calling Gemini")
@@ -131,7 +133,8 @@ def main() -> None:
     uses_fn = None if a.no_uses else (lambda g: what_its_for(g, a.lang))
     sched = build_schedule(result, confirm.load(out / "confirmations.json"), uses_fn)
     (out / "schedule.json").write_text(json.dumps(sched, indent=2, ensure_ascii=False))
-    html_card = card_html(sched, a.lang, crops=not a.no_crops)
+    audio = speak(sched, a.lang, out / "card.mp3") if a.voice else None
+    html_card = card_html(sched, a.lang, crops=not a.no_crops, audio="card.mp3" if audio else None)
     text_card = card_text(sched, a.lang)
     (out / "card.html").write_text(html_card, encoding="utf-8")
     (out / "card.txt").write_text(text_card, encoding="utf-8")
@@ -141,6 +144,8 @@ def main() -> None:
     kb = lambda t: len(t.encode("utf-8")) / 1024
     print(f"\nSaved: card.html ({kb(html_card):.0f} KB), card.txt ({kb(text_card):.1f} KB, "
           f"for SMS/WhatsApp text), result.json, schedule.json in {out}")
+    if audio:
+        print(f"Voice: {audio} ({audio.stat().st_size // 1024} KB)")
 
 
 if __name__ == "__main__":
