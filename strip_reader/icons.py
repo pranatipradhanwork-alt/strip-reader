@@ -18,6 +18,8 @@ _PATHS = {
     "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     "check": '<path d="M5 12l5 5 9-10"/>',
     "phone": '<path d="M5 3h4l2 5-3 2a11 11 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z"/>',
+    "globe": '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+    "chevron": '<path d="M6 9l6 6 6-6"/>',
     "arrow": '<path d="M5 12h14M13 6l6 6-6 6"/>',
 }
 

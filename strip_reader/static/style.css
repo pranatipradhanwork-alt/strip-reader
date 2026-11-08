@@ -94,10 +94,22 @@ img { max-width: 100%; }
               background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
 html[data-theme="light"] .brand-mark, :root:not([data-theme]) .brand-mark { background: linear-gradient(135deg, #e8335a, #ff6b8a); }
 .spacer { flex: 1; }
-.langs { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px; }
-.langs a { text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 8px; font-size: 15px; font-weight: 600; }
-.langs a[aria-current="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
-html[data-theme="dark"] .langs a[aria-current="true"] { background: var(--line-2); }
+.navlinks { margin-left: 18px; }
+/* language menu: one compact dropdown (no script needed) */
+.lang-menu { position: relative; }
+.lang-menu summary { list-style: none; display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: 10px;
+                     border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font-weight: 600; font-size: 15px; cursor: pointer; }
+.lang-menu summary::-webkit-details-marker { display: none; }
+.lang-menu[open] summary { border-color: var(--accent); }
+.lang-menu[open] summary .i:last-child { transform: rotate(180deg); }
+.lang-list { position: absolute; right: 0; top: calc(100% + 6px); min-width: 170px; padding: 6px; z-index: 20;
+             background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px;
+             box-shadow: 0 10px 30px rgba(0, 0, 0, .14); }
+html[data-theme="dark"] .lang-list { background: #121a2c; }
+.lang-list a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 8px;
+               color: var(--ink); text-decoration: none; font-size: 16px; font-weight: 500; }
+.lang-list a:hover { background: var(--surface-2); }
+.lang-list a[aria-current="true"] { color: var(--accent-text); font-weight: 700; }
 .theme-toggle { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface);
                 color: var(--ink); display: grid; place-items: center; cursor: pointer; }
 .theme-toggle .moon { display: none; }
@@ -271,7 +283,7 @@ details { font-size: 13px; color: var(--muted); margin-top: 8px; }
   .wrap, .sheet { padding: 0 16px; }
   .topbar .wrap { gap: 8px; }
   .brand-text { display: none; }
-  .langs a { padding: 5px 9px; font-size: 14px; }
+  .lang-menu summary { padding: 0 10px; }
   .hero h1 { font-size: 34px; }
   .lede { font-size: 18px; }
   .scan { padding: 20px; }

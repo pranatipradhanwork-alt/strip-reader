@@ -235,6 +235,9 @@ THEME_JS = """<script>
   if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', t);
   document.addEventListener('click', function (e) {
+    document.querySelectorAll('details.lang-menu[open]').forEach(function (d) {   // close menu on outside tap
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
     var b = e.target.closest && e.target.closest('.theme-toggle'); if (!b) return;
     var n = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', n);

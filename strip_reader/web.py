@@ -84,16 +84,23 @@ class Run:
 # ---------- shared page pieces ----------
 
 def topbar(lang: str, lang_href, right: str = "") -> str:
-    """Brand + language switch. lang_href(code) gives the link for each language."""
+    """Logo + Read/History (left); language menu + theme toggle (right).
+
+    lang_href(code) gives the link for each language. `right` holds the Read/History links.
+    """
     esc = html.escape
-    langs = "".join(
-        f"<a href='{esc(lang_href(code))}' aria-current='{str(code == lang).lower()}'>{LANG_LABELS.get(code, code)}</a>"
+    options = "".join(
+        f"<a href='{esc(lang_href(code))}' role='menuitem'{' aria-current=\'true\'' if code == lang else ''}>"
+        f"<span>{LANG_LABELS.get(code, code)}</span>{icon('check', 16) if code == lang else ''}</a>"
         for code in LANGS)
+    menu = (f"<details class='lang-menu'><summary aria-label='Language'>{icon('globe', 18)}"
+            f"<span class='lang-name'>{LANG_LABELS.get(lang, lang)}</span>{icon('chevron', 16)}</summary>"
+            f"<div class='lang-list' role='menu'>{options}</div></details>")
     toggle = (f"<button class='theme-toggle' type='button' aria-label='Light or dark theme'>"
               f"<span class='sun'>{icon('sun', 20)}</span><span class='moon'>{icon('moon', 20)}</span></button>")
     return (f"<header class='topbar'><div class='wrap'><a class='brand' href='/'><span class='brand-mark'>"
-            f"{icon('logo', 20)}</span><span class='brand-text'>Strip Reader</span></a><span class='spacer'></span>"
-            f"{right}<nav class='langs' aria-label='Language'>{langs}</nav>{toggle}</div></header>")
+            f"{icon('logo', 20)}</span><span class='brand-text'>Strip Reader</span></a>{right}"
+            f"<span class='spacer'></span>{menu}{toggle}</div></header>")
 
 
 def tabbar(lang: str, current: str = "read") -> str:
