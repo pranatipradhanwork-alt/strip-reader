@@ -10,7 +10,8 @@ Many elderly people can't read the small print on a medicine strip or a doctor's
 
 ## Features
 
-- **Mobile web app:** take or choose a photo, pick English / हिन्दी / ଓଡ଼ିଆ, and get the card with "read aloud" and a pharmacist check, with big text, light and dark mode, and no app install.
+- **Web app:** take a photo (in-page camera on laptops and phones) or choose one, pick English / हिन्दी / ଓଡ଼ିଆ, and get the medicine schedule as a day timeline with "read aloud", a pharmacist check and a private **history** of past readings (kept per browser, no accounts, each reading can be deleted). Typeface: Atkinson Hyperlegible, designed for low-vision readers.
+- **Guardrails:** a photo that isn't a medicine strip, box or prescription is rejected with a fixed message and nothing from it is used; the app gives up after one minute instead of making someone wait, keeps the photo and offers "Try again".
 - **Reads strips, boxes and prescriptions** with a vision LLM (Gemini) into structured data: name, strength, timing, printed vs handwritten, confidence and the region it was read from.
 - **Verifies every name** against a medicine list of Indian generics and brands (brand → generic).
 - **Abstains when unsure:** low confidence, handwriting, unknown names or missing strengths all lead to *"Please confirm with a pharmacist or doctor."*
@@ -202,7 +203,8 @@ strip_reader/
   leaflets.py    leaflet RAG and dose guard
   confirm.py     pharmacist confirmation rules
   voice.py       card -> spoken script -> MP3
-  app.py         web app: upload photo -> card, read aloud, pharmacist check (Flask)
+  app.py         web app: camera/upload -> card, read aloud, pharmacist check, history (Flask)
+  icons.py       inline line icons
   web.py         card + pharmacist review pages
   static/        style.css (shared by the app and the saved card)
   cli.py         command line
@@ -211,7 +213,7 @@ data/
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py
-tests/           87 tests, no API key needed
+tests/           91 tests, no API key needed
 ```
 
 ## Testing
