@@ -227,17 +227,28 @@ def _img_tag(path: str | None) -> str:
 
 
 STYLE = (Path(__file__).resolve().parent / "static" / "style.css").read_text(encoding="utf-8")
-FONTS = ('<link rel="preconnect" href="https://fonts.googleapis.com">'
-         '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-         '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700'
-         '&family=Noto+Sans+Oriya:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&display=swap">')
+FONTS = ""  # system fonts (SF / Roboto / Noto): native look, nothing to download on a weak network
+# Light or dark: the saved choice, else the phone's setting. Runs before the page draws (no flash).
+THEME_JS = """<script>
+(function () {
+  var t = null; try { t = localStorage.getItem('sr-theme'); } catch (e) {}
+  if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.theme-toggle'); if (!b) return;
+    var n = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', n);
+    try { localStorage.setItem('sr-theme', n); } catch (e) {}
+  });
+})();
+</script>"""
 SLOT_ICONS = {"morning": "sun", "afternoon": "sun_high", "evening": "sunset", "night": "moon", "as_needed": "clock"}
 
 
 def head(title: str) -> str:
     """<head> shared by every page: fonts (fall back to the phone's own if offline) + inline styles."""
     return (f"<meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"
-            f"<meta name='theme-color' content='#13213c'><title>{html.escape(title)}</title>{FONTS}<style>{STYLE}</style>")
+            f"<title>{html.escape(title)}</title>{THEME_JS}{FONTS}<style>{STYLE}</style>")
 
 
 def _med_html(e: dict, L: dict, img) -> str:
@@ -248,7 +259,7 @@ def _med_html(e: dict, L: dict, img) -> str:
     amt = ""
     if e.get("amount"):
         a = {0.5: "½", 0.25: "¼"}.get(e["amount"], f"{e['amount']:g}")
-        amt = f"<span class='amt'>{a} ×</span>"
+        amt = f"<span class='amt' title='amount'>{a}</span>"
     tick = (f" <span class='tick'>{icon('check', 16)}{esc(L['pharmacist'])}</span>" if e.get("confirmed_by") else "")
     chips = []
     if t.get("reason"):
@@ -320,4 +331,4 @@ def card_html(sched: dict, lang: str = "en", crops: bool = True, audio: str | No
     parts.append(f"<div class='timeline'>{''.join(slots)}</div>")
     parts.append(f"<p class='card-foot'>{esc(L['footer'])}</p>")
     return (f"<!doctype html><html lang='{lang}'><head>{head('Medicine Card')}</head>"
-            f"<body>{nav}<main class='sheet'>{''.join(parts)}</main></body></html>")
+            f"<body class='has-tabs'>{nav}<main class='sheet'>{''.join(parts)}</main></body></html>")

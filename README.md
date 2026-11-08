@@ -10,7 +10,7 @@ Many elderly people can't read the small print on a medicine strip or a doctor's
 
 ## Features
 
-- **Web app:** take a photo (in-page camera on laptops and phones) or choose one, pick English / हिन्दी / ଓଡ଼ିଆ, and get the medicine schedule as a day timeline with "read aloud", a pharmacist check and a private **history** of past readings (kept per browser, no accounts, each reading can be deleted). Typeface: Atkinson Hyperlegible, designed for low-vision readers.
+- **Web app:** take a photo (in-page camera on laptops and phones) or choose one, pick English / हिन्दी / ଓଡ଼ିଆ, and get the medicine schedule as a day timeline with "read aloud", a pharmacist check and a private **history** of past readings (kept per browser, no accounts, each reading can be deleted). Two themes: a clean light theme and a dark theme, switched with a toggle (it follows the phone's setting by default); large text throughout.
 - **Guardrails:** a photo that isn't a medicine strip, box or prescription is rejected with a fixed message and nothing from it is used; the app gives up after one minute instead of making someone wait, keeps the photo and offers "Try again".
 - **Reads strips, boxes and prescriptions** with a vision LLM (Gemini) into structured data: name, strength, timing, printed vs handwritten, confidence and the region it was read from.
 - **Verifies every name** against a medicine list of Indian generics and brands (brand → generic).

@@ -55,7 +55,8 @@
     "history_note",
     "open",
     "delete",
-    "photos_n"
+    "photos_n",
+    "read_tab"
   ],
   "title": "ଆଜିର ଔଷଧ",
   "morning": "ସକାଳ",
@@ -140,5 +141,6 @@
   "history_note": "କେବଳ ଏହି ଡିଭାଇସର ବ୍ରାଉଜରରେ ସେଭ୍ ହୋଇଛି। ଦରକାର ନଥିବା ପଢ଼ା ଡିଲିଟ୍ କରନ୍ତୁ।",
   "open": "ଖୋଲନ୍ତୁ",
   "delete": "ଡିଲିଟ୍",
-  "photos_n": "{n}ଟି ଫଟୋ"
+  "photos_n": "{n}ଟି ଫଟୋ",
+  "read_tab": "ପଢ଼ନ୍ତୁ"
 }

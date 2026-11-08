@@ -26,7 +26,7 @@ from .card import LANGS, labels
 from .leaflets import what_its_for
 from .voice import speak
 from .icons import icon
-from .web import Run, card_page, history_link, page, review_page, topbar
+from .web import Run, card_page, history_link, page, review_page, tabbar, topbar
 
 ROOT = Path(__file__).resolve().parent.parent
 FIX = ROOT / "tests" / "fixtures"
@@ -197,7 +197,7 @@ def home_page(lang: str, error: str = "") -> str:
       <label for="photos" class="btn btn-outline btn-block">{icon('image')}{esc(L['choose_photo'])}</label>
       <div class="previews" id="previews" aria-live="polite"></div>
       <p class="count" id="count" hidden></p>
-      <button class="btn btn-primary btn-block" type="submit" id="go">{esc(L['read_btn'])}{icon('arrow')}</button>
+      <button class="btn btn-primary btn-block" type="submit" id="go" hidden>{esc(L['read_btn'])}{icon('arrow')}</button>
     </form>
     <div class="or-line">{esc(L['or_word'])}</div>
     <form method="post" action="/sample" class="sample">
@@ -227,7 +227,7 @@ def home_page(lang: str, error: str = "") -> str:
     script = SCRIPT.replace("__CHOSEN__", json.dumps(L["photos_chosen"])).replace(
         "__BLOCKED__", json.dumps(L["camera_blocked"])).replace("__MAX__", str(MAX_PHOTOS))
     return page(L["app_name"], body.replace("{SCRIPT}", script), lang,
-                topbar(lang, lambda c: f"/?lang={c}", right=history_link(lang)))
+                topbar(lang, lambda c: f"/?lang={c}", right=history_link(lang)), tabbar(lang, "read"))
 
 
 def history_page(lang: str, runs: list[dict]) -> str:
@@ -249,7 +249,7 @@ def history_page(lang: str, runs: list[dict]) -> str:
             f"<h1>{esc(L['history_title'])}</h1><p class='meta'>{esc(L['history_note'])}</p></header>{listing}"
             f"<p style='margin:28px 0 48px'><a class='btn btn-outline' href='/?lang={lang}'>{icon('camera')}"
             f"{esc(L['new_photo'])}</a></p></div>")
-    return page(L["history"], body, lang, topbar(lang, lambda c: f"/history?lang={c}"))
+    return page(L["history"], body, lang, topbar(lang, lambda c: f"/history?lang={c}"), tabbar(lang, "history"))
 
 
 SCRIPT = """<script>
@@ -271,6 +271,7 @@ SCRIPT = """<script>
       const img = document.createElement('img'); img.alt = ''; img.src = URL.createObjectURL(f); previews.appendChild(img);
     });
     count.hidden = !files.length; count.textContent = chosen.replace('{n}', Math.min(files.length, MAX));
+    document.getElementById('go').hidden = !files.length;   // one clear next step at a time
   }
   input.addEventListener('change', () => { files = files.concat([...input.files]); sync(); });
   phonecam.addEventListener('change', () => { files = files.concat([...phonecam.files]); sync(); });

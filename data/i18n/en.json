@@ -85,5 +85,6 @@
   "history_note": "Saved on this device's browser only. Delete any reading you no longer need.",
   "open": "Open",
   "delete": "Delete",
-  "photos_n": "{n} photo(s)"
+  "photos_n": "{n} photo(s)",
+  "read_tab": "Read"
 }
