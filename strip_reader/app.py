@@ -227,7 +227,7 @@ def home_page(lang: str, error: str = "") -> str:
     script = SCRIPT.replace("__CHOSEN__", json.dumps(L["photos_chosen"])).replace(
         "__BLOCKED__", json.dumps(L["camera_blocked"])).replace("__MAX__", str(MAX_PHOTOS))
     return page(L["app_name"], body.replace("{SCRIPT}", script), lang,
-                topbar(lang, lambda c: f"/?lang={c}", right=history_link(lang)), tabbar(lang, "read"))
+                topbar(lang, lambda c: f"/?lang={c}", right=history_link(lang, "read")), tabbar(lang, "read"))
 
 
 def history_page(lang: str, runs: list[dict]) -> str:
@@ -249,7 +249,8 @@ def history_page(lang: str, runs: list[dict]) -> str:
             f"<h1>{esc(L['history_title'])}</h1><p class='meta'>{esc(L['history_note'])}</p></header>{listing}"
             f"<p style='margin:28px 0 48px'><a class='btn btn-outline' href='/?lang={lang}'>{icon('camera')}"
             f"{esc(L['new_photo'])}</a></p></div>")
-    return page(L["history"], body, lang, topbar(lang, lambda c: f"/history?lang={c}"), tabbar(lang, "history"))
+    return page(L["history"], body, lang, topbar(lang, lambda c: f"/history?lang={c}", right=history_link(lang, "history")),
+                tabbar(lang, "history"))
 
 
 SCRIPT = """<script>

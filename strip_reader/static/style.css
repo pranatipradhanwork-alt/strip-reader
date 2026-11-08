@@ -103,7 +103,10 @@ html[data-theme="dark"] .langs a[aria-current="true"] { background: var(--line-2
 .theme-toggle .moon { display: none; }
 html[data-theme="dark"] .theme-toggle .sun { display: none; }
 html[data-theme="dark"] .theme-toggle .moon { display: block; }
-.navlink { text-decoration: none; color: var(--accent-text); font-weight: 600; font-size: 16px; padding: 8px 6px; }
+.navlinks { display: flex; gap: 4px; }
+.navlink { text-decoration: none; color: var(--muted); font-weight: 600; font-size: 16px; padding: 7px 12px; border-radius: 10px; }
+.navlink:hover { color: var(--ink); }
+.navlink[aria-current="page"] { color: var(--accent-text); background: var(--accent-soft); }
 
 /* mobile tab bar (Read / History), like a native app */
 .tabbar { display: none; }
@@ -114,7 +117,7 @@ html[data-theme="dark"] .theme-toggle .moon { display: block; }
   .tabbar a { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-weight: 600;
               color: var(--muted); text-decoration: none; }
   .tabbar a[aria-current="page"] { color: var(--accent-text); }
-  .topbar .navlink { display: none; }
+  .topbar .navlinks { display: none; }
 }
 
 /* ---------- buttons ---------- */

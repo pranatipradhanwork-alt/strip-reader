@@ -134,8 +134,13 @@ def card_page(run: Run, lang: str, base: str, voice: bool, uses_fn, speak_fn, ca
     return card_html(sched, lang, audio=audio, nav=bar, actions=actions)
 
 
-def history_link(lang: str) -> str:
-    return f"<a class='navlink' href='/history?lang={lang}'>{html.escape(labels(lang)['history'])}</a>"
+def history_link(lang: str, current: str = "") -> str:
+    """Top-bar links (laptops): Read and History, current page highlighted. Phones use the bottom tab bar."""
+    L = labels(lang)
+    link = lambda key, href, text: (f"<a class='navlink' href='{href}'"
+                                    f"{' aria-current=\'page\'' if key == current else ''}>{html.escape(text)}</a>")
+    return (f"<nav class='navlinks'>{link('read', f'/?lang={lang}', L['read_tab'])}"
+            f"{link('history', f'/history?lang={lang}', L['history'])}</nav>")
 
 
 def review_page(run: Run, base: str, lang: str = "en", errors=None, form=None) -> str:
