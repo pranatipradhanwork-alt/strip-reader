@@ -188,17 +188,18 @@ html[data-theme="dark"] .theme-toggle .moon { display: block; }
 .read-visual { display: grid; place-items: center; gap: 14px; min-height: 80px; margin-bottom: 18px; }
 .pop-stage { position: relative; width: 96px; height: 90px; }
 .pop-tile { position: absolute; inset: 0; display: grid; place-items: center; color: var(--accent-text);
-            opacity: 0; transform: scale(.3); animation: popone 3.6s cubic-bezier(.34, 1.56, .64, 1) infinite; }
+            opacity: 0; transform: scale(.3); animation: popone 4.5s cubic-bezier(.34, 1.56, .64, 1) infinite; }
 .pop-tile .i { stroke-width: 1.6; }
+.pop-tile.line { color: var(--accent-text); filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--accent) 25%, transparent)); }
 .two-pills { display: flex; align-items: center; font-size: 48px; }
 .two-pills span:first-child { transform: rotate(-15deg) translate(8px, -6px); }
 .two-pills span:last-child { transform: rotate(20deg) translate(-8px, 8px); }
 .pop-tile.emoji { font-size: 64px; line-height: 1; filter: drop-shadow(0 8px 14px rgba(15, 23, 42, .18)); font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
-/* each icon has its own slot in the 3.6 s loop: pop in, hold, shrink away, then the next one pops */
+/* each icon has its own slot in the 4.5 s loop: pop in, hold, shrink away, then the next one pops */
 @keyframes popone { 0% { opacity: 0; transform: scale(.3) rotate(-12deg); }
-                    6% { opacity: 1; transform: scale(1.12) rotate(3deg); }
-                    11%, 20% { opacity: 1; transform: scale(1) rotate(0); }
-                    25%, 100% { opacity: 0; transform: scale(.4) rotate(8deg); } }
+                    5% { opacity: 1; transform: scale(1.12) rotate(3deg); }
+                    9%, 16% { opacity: 1; transform: scale(1) rotate(0); }
+                    20%, 100% { opacity: 0; transform: scale(.4) rotate(8deg); } }
 .thumb { position: relative; width: 72px; height: 72px; border-radius: 22px; overflow: hidden; border: 1px solid var(--line-2);
          box-shadow: 0 8px 24px rgba(15, 23, 42, .12); }
 .thumb[hidden] { display: none; }
