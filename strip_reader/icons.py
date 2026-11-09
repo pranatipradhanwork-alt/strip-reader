@@ -20,6 +20,11 @@ _PATHS = {
     "phone": '<path d="M5 3h4l2 5-3 2a11 11 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z"/>',
     "globe": '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
     "chevron": '<path d="M6 9l6 6 6-6"/>',
+    "capsule": '<g transform="rotate(-40 12 12)"><rect x="3" y="8" width="18" height="8" rx="4"/><path d="M12 8v8"/></g>',
+    "tablet": '<ellipse cx="12" cy="9.5" rx="8" ry="4.5"/><path d="M4 9.5v4c0 2.5 3.6 4.5 8 4.5s8-2 8-4.5v-4"/><path d="M8.5 9.5h7"/>',
+    "strip": '<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="8" cy="10" r="1.8"/><circle cx="12" cy="10" r="1.8"/><circle cx="16" cy="10" r="1.8"/><circle cx="8" cy="15" r="1.8"/><circle cx="12" cy="15" r="1.8"/><circle cx="16" cy="15" r="1.8"/>',
+    "bottle": '<path d="M9 3h6v3H9z"/><path d="M8 6h8l1 3v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9z"/><path d="M10 13h4M12 11v4"/>',
+    "rx": '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 11v6M10 11h2.2a1.8 1.8 0 0 1 0 3.6H10M12 14.6l3 3.4"/>',
     "arrow": '<path d="M5 12h14M13 6l6 6-6 6"/>',
 }
 
