@@ -195,18 +195,21 @@ html[data-theme="dark"] .theme-toggle .moon { display: block; }
                    background-size: 100% 200%; animation: sweep 1.8s ease-in-out infinite alternate; }
 @keyframes scan { from { top: 0; } to { top: calc(100% - 3px); } }
 @keyframes sweep { from { background-position: 0 100%; } to { background-position: 0 0; } }
-.pill-anim { position: relative; width: 140px; height: 120px; margin: 0 auto 18px; }
-.pill-anim[hidden] { display: none; }
-.capsule { position: absolute; left: 30px; top: 38px; width: 80px; height: 34px; display: flex; border-radius: 20px; overflow: hidden;
-           box-shadow: 0 8px 20px rgba(0, 0, 0, .15); animation: float 2.2s ease-in-out infinite; }
-.capsule .half { flex: 1; }
-.capsule .a { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 85%, #fff), var(--accent)); }
-.capsule .b { background: linear-gradient(180deg, #ffffff, #e6e8ee); }
-html[data-theme="dark"] .capsule .b { background: linear-gradient(180deg, #dfe6f5, #9aa8c6); }
-.dot { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--accent-2); opacity: .0; animation: pop 2.2s ease-in-out infinite; }
-.d1 { left: 18px; top: 22px; } .d2 { left: 118px; top: 30px; animation-delay: .5s; } .d3 { left: 64px; top: 92px; animation-delay: 1s; background: var(--use); }
-@keyframes float { 0%, 100% { transform: translateY(0) rotate(-18deg); } 50% { transform: translateY(-10px) rotate(-8deg); } }
-@keyframes pop { 0%, 100% { opacity: 0; transform: scale(.4); } 40% { opacity: .9; transform: scale(1); } }
+.strip-anim { width: 240px; margin: 0 auto 20px; filter: drop-shadow(0 12px 22px rgba(0, 0, 0, .14)); }
+.strip-anim[hidden] { display: none; }
+.strip-anim .foil-a { stop-color: #e9ecf2; }
+.strip-anim .foil-b { stop-color: #ffffff; }
+html[data-theme="dark"] .strip-anim .foil-a { stop-color: #23304d; }
+html[data-theme="dark"] .strip-anim .foil-b { stop-color: #33446a; }
+.strip-anim .foil { stroke: var(--line-2); stroke-width: 1; }
+.strip-anim .tab { fill: var(--surface-2); stroke: var(--line-2); stroke-width: 1.5; animation: found 3.6s ease-in-out infinite; }
+html[data-theme="dark"] .strip-anim .tab { fill: #1a2440; }
+.strip-anim .label { fill: var(--line-2); }
+.strip-anim .beam { fill: var(--accent); filter: drop-shadow(0 0 6px var(--accent)); animation: beam 1.8s ease-in-out infinite alternate; }
+@keyframes beam { from { transform: translateY(8px); } to { transform: translateY(138px); } }
+@keyframes found { 0%, 30% { fill: var(--surface-2); stroke: var(--line-2); }
+                   45%, 70% { fill: color-mix(in srgb, var(--use) 22%, transparent); stroke: var(--use); }
+                   100% { fill: var(--surface-2); stroke: var(--line-2); } }
 .reading h2 { font-size: 24px; margin: 0 0 16px; min-height: 2.4em; display: flex; align-items: center; justify-content: center; }
 .stages { list-style: none; margin: 0 auto 16px; padding: 0; text-align: left; display: grid; gap: 10px; max-width: 320px; }
 .stages li { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 16px; }
@@ -217,7 +220,7 @@ html[data-theme="dark"] .capsule .b { background: linear-gradient(180deg, #dfe6f
 .stages li.st-done::before { border-color: var(--ok); background: var(--ok)
   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center / 12px no-repeat; }
 .wait-note { font-size: 14px; color: var(--muted); margin: 0; }
-@media (prefers-reduced-motion: reduce) { .scan-line, .scan-box::after, .capsule, .dot, .stages li.st-now::before { animation: none; } .dot { opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { .scan-line, .scan-box::after, .strip-anim .beam, .strip-anim .tab, .stages li.st-now::before { animation: none; } }
 .spinner { width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 20px; border: 4px solid var(--line); border-top-color: var(--accent);
            animation: spin .9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

@@ -223,9 +223,20 @@ def home_page(lang: str, error: str = "") -> str:
 <div class="loading" id="loading" role="status" aria-live="polite">
   <div class="reading">
     <div class="scan-box" id="scanbox" hidden><img id="scanimg" alt=""><span class="scan-line"></span></div>
-    <div class="pill-anim" id="pillanim" aria-hidden="true">
-      <span class="capsule"><span class="half a"></span><span class="half b"></span></span>
-      <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+    <div class="strip-anim" id="pillanim" aria-hidden="true">
+      <svg viewBox="0 0 240 150" width="240" height="150">
+        <defs>
+          <linearGradient id="foil" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" class="foil-a"/><stop offset=".5" class="foil-b"/><stop offset="1" class="foil-a"/>
+          </linearGradient>
+          <clipPath id="stripclip"><rect x="8" y="8" width="224" height="134" rx="14"/></clipPath>
+        </defs>
+        <rect class="foil" x="8" y="8" width="224" height="134" rx="14" fill="url(#foil)"/>
+        <rect class="tab" x="28" y="26" width="26" height="30" rx="13" style="animation-delay:0.00s"/><rect class="tab" x="66" y="26" width="26" height="30" rx="13" style="animation-delay:0.36s"/><rect class="tab" x="104" y="26" width="26" height="30" rx="13" style="animation-delay:0.72s"/><rect class="tab" x="142" y="26" width="26" height="30" rx="13" style="animation-delay:1.08s"/><rect class="tab" x="180" y="26" width="26" height="30" rx="13" style="animation-delay:1.44s"/><rect class="tab" x="28" y="68" width="26" height="30" rx="13" style="animation-delay:0.18s"/><rect class="tab" x="66" y="68" width="26" height="30" rx="13" style="animation-delay:0.54s"/><rect class="tab" x="104" y="68" width="26" height="30" rx="13" style="animation-delay:0.90s"/><rect class="tab" x="142" y="68" width="26" height="30" rx="13" style="animation-delay:1.26s"/><rect class="tab" x="180" y="68" width="26" height="30" rx="13" style="animation-delay:1.62s"/>
+        <rect class="label" x="22" y="118" width="120" height="8" rx="4"/>
+        <rect class="label" x="150" y="118" width="64" height="8" rx="4"/>
+        <g clip-path="url(#stripclip)"><rect class="beam" x="8" y="0" width="224" height="4" rx="2"/></g>
+      </svg>
     </div>
     <h2 id="stagetext">{esc(L['step_upload'])}…</h2>
     <ol class="stages" id="stages">
