@@ -223,7 +223,7 @@ def home_page(lang: str, error: str = "") -> str:
 <div class="loading" id="loading" role="status" aria-live="polite">
   <div class="reading">
     <div class="read-visual" aria-hidden="true">
-      <div class="pop-stage"><span class="pop-tile" style="animation-delay:0.0s">{icon('capsule', 36)}</span><span class="pop-tile" style="animation-delay:0.9s">{icon('tablet', 36)}</span><span class="pop-tile" style="animation-delay:1.8s">{icon('strip', 36)}</span><span class="pop-tile" style="animation-delay:2.7s">{icon('bottle', 36)}</span><span class="pop-tile" style="animation-delay:3.6s">{icon('rx', 36)}</span></div>
+      <div class="pop-stage"><span class="pop-tile" style="animation-delay:0.0s">{icon('capsule', 60)}</span><span class="pop-tile" style="animation-delay:0.9s">{icon('tablet', 60)}</span><span class="pop-tile" style="animation-delay:1.8s">{icon('strip', 60)}</span><span class="pop-tile" style="animation-delay:2.7s">{icon('bottle', 60)}</span><span class="pop-tile" style="animation-delay:3.6s">{icon('rx', 60)}</span></div>
       <div class="thumb" id="scanbox" hidden><img id="scanimg" alt=""><span class="shimmer"></span></div>
       <span id="pillanim" hidden></span>
     </div>
