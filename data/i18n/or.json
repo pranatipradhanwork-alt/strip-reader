@@ -56,7 +56,12 @@
     "open",
     "delete",
     "photos_n",
-    "read_tab"
+    "read_tab",
+    "step_upload",
+    "step_scan",
+    "step_read",
+    "step_check",
+    "step_card"
   ],
   "title": "ଆଜିର ଔଷଧ",
   "morning": "ସକାଳ",
@@ -142,5 +147,10 @@
   "open": "ଖୋଲନ୍ତୁ",
   "delete": "ଡିଲିଟ୍",
   "photos_n": "{n}ଟି ଫଟୋ",
-  "read_tab": "ପଢ଼ନ୍ତୁ"
+  "read_tab": "ପଢ଼ନ୍ତୁ",
+  "step_upload": "ଆପଣଙ୍କ ଫଟୋ ପଠାଯାଉଛି",
+  "step_scan": "ଲେବେଲ ସ୍କାନ୍ ହେଉଛି",
+  "step_read": "ଔଷଧର ନାମ ପଢ଼ାଯାଉଛି",
+  "step_check": "ଔଷଧ ତାଲିକା ସହ ମିଳାଯାଉଛି",
+  "step_card": "ଆପଣଙ୍କ କାର୍ଡ ପ୍ରସ୍ତୁତ ହେଉଛି"
 }

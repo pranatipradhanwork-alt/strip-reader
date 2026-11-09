@@ -86,5 +86,10 @@
   "open": "Open",
   "delete": "Delete",
   "photos_n": "{n} photo(s)",
-  "read_tab": "Read"
+  "read_tab": "Read",
+  "step_upload": "Uploading your photo",
+  "step_scan": "Scanning the label",
+  "step_read": "Reading medicine names",
+  "step_check": "Checking against the medicine list",
+  "step_card": "Preparing your card"
 }

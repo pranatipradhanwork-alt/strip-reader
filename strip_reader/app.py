@@ -220,8 +220,20 @@ def home_page(lang: str, error: str = "") -> str:
     <button type="button" class="btn btn-quiet" id="camdone">{esc(L['done'])}</button>
   </div>
 </div>
-<div class="loading" id="loading" role="status">
-  <div><div class="spinner"></div><h2>{esc(L['reading'])}</h2><p>{esc(L['reading_wait'])}</p></div>
+<div class="loading" id="loading" role="status" aria-live="polite">
+  <div class="reading">
+    <div class="scan-box" id="scanbox" hidden><img id="scanimg" alt=""><span class="scan-line"></span></div>
+    <div class="pill-anim" id="pillanim" aria-hidden="true">
+      <span class="capsule"><span class="half a"></span><span class="half b"></span></span>
+      <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+    </div>
+    <h2 id="stagetext">{esc(L['step_upload'])}…</h2>
+    <ol class="stages" id="stages">
+      <li>{esc(L['step_upload'])}</li><li>{esc(L['step_scan'])}</li><li>{esc(L['step_read'])}</li>
+      <li>{esc(L['step_check'])}</li><li>{esc(L['step_card'])}</li>
+    </ol>
+    <p class="wait-note">{esc(L['reading_wait'])}</p>
+  </div>
 </div>
 {SCRIPT}"""
     script = SCRIPT.replace("__CHOSEN__", json.dumps(L["photos_chosen"])).replace(
@@ -301,8 +313,23 @@ SCRIPT = """<script>
   document.querySelectorAll('form.upload, form.sample').forEach(f =>
     f.addEventListener('submit', e => {
       if (f.id === 'upload' && !files.length) { e.preventDefault(); input.click(); return; }
-      stopCam(); loading.classList.add('on');
+      stopCam(); startReading(f.id === 'upload' ? files[0] : null);
     }));
+  // Reading screen: the person's own photo with a moving scan line (or a pill animation for
+  // the sample), and the stages ticked off one by one while the server works.
+  function startReading(photo) {
+    const box = document.getElementById('scanbox'), pill = document.getElementById('pillanim'),
+          items = [...document.querySelectorAll('#stages li')], text = document.getElementById('stagetext');
+    if (photo) { document.getElementById('scanimg').src = URL.createObjectURL(photo); box.hidden = false; pill.hidden = true; }
+    let i = 0;
+    const show = () => {
+      items.forEach((li, k) => { li.className = k < i ? 'st-done' : (k === i ? 'st-now' : ''); });
+      text.textContent = items[i].textContent + '…';
+    };
+    show();
+    loading.classList.add('on');
+    const t = setInterval(() => { if (i < items.length - 1) { i++; show(); } else clearInterval(t); }, 2600);
+  }
   window.addEventListener('pageshow', () => loading.classList.remove('on'));
 })();
 </script>"""
