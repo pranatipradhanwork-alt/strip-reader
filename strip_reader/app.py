@@ -222,20 +222,19 @@ def home_page(lang: str, error: str = "") -> str:
 </div>
 <div class="loading" id="loading" role="status" aria-live="polite">
   <div class="reading">
-    <div class="scan-box" id="scanbox" hidden><img id="scanimg" alt=""><span class="scan-line"></span></div>
+    <div class="scan-box" id="scanbox" hidden><img id="scanimg" alt=""><svg class="photo-lens" viewBox="0 0 48 48" width="64" height="64" aria-hidden="true"><circle cx="20" cy="20" r="14"/><path d="M31 31 L44 44"/></svg></div>
     <div class="strip-anim" id="pillanim" aria-hidden="true">
       <svg viewBox="0 0 240 150" width="240" height="150">
         <defs>
           <linearGradient id="foil" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" class="foil-a"/><stop offset=".5" class="foil-b"/><stop offset="1" class="foil-a"/>
           </linearGradient>
-          <clipPath id="stripclip"><rect x="8" y="8" width="224" height="134" rx="14"/></clipPath>
         </defs>
         <rect class="foil" x="8" y="8" width="224" height="134" rx="14" fill="url(#foil)"/>
-        <rect class="tab" x="28" y="26" width="26" height="30" rx="13" style="animation-delay:0.00s"/><rect class="tab" x="66" y="26" width="26" height="30" rx="13" style="animation-delay:0.36s"/><rect class="tab" x="104" y="26" width="26" height="30" rx="13" style="animation-delay:0.72s"/><rect class="tab" x="142" y="26" width="26" height="30" rx="13" style="animation-delay:1.08s"/><rect class="tab" x="180" y="26" width="26" height="30" rx="13" style="animation-delay:1.44s"/><rect class="tab" x="28" y="68" width="26" height="30" rx="13" style="animation-delay:0.18s"/><rect class="tab" x="66" y="68" width="26" height="30" rx="13" style="animation-delay:0.54s"/><rect class="tab" x="104" y="68" width="26" height="30" rx="13" style="animation-delay:0.90s"/><rect class="tab" x="142" y="68" width="26" height="30" rx="13" style="animation-delay:1.26s"/><rect class="tab" x="180" y="68" width="26" height="30" rx="13" style="animation-delay:1.62s"/>
+        <g class="tabg" style="animation-delay:0.0s"><rect class="tab" x="28" y="26" width="26" height="30" rx="13" style="animation-delay:0.0s"/><path class="tick" d="M35 41 l4 4 l8 -9" style="animation-delay:0.0s"/></g><g class="tabg" style="animation-delay:0.4s"><rect class="tab" x="66" y="26" width="26" height="30" rx="13" style="animation-delay:0.4s"/><path class="tick" d="M73 41 l4 4 l8 -9" style="animation-delay:0.4s"/></g><g class="tabg" style="animation-delay:0.8s"><rect class="tab" x="104" y="26" width="26" height="30" rx="13" style="animation-delay:0.8s"/><path class="tick" d="M111 41 l4 4 l8 -9" style="animation-delay:0.8s"/></g><g class="tabg" style="animation-delay:1.2s"><rect class="tab" x="142" y="26" width="26" height="30" rx="13" style="animation-delay:1.2s"/><path class="tick" d="M149 41 l4 4 l8 -9" style="animation-delay:1.2s"/></g><g class="tabg" style="animation-delay:1.6s"><rect class="tab" x="180" y="26" width="26" height="30" rx="13" style="animation-delay:1.6s"/><path class="tick" d="M187 41 l4 4 l8 -9" style="animation-delay:1.6s"/></g><g class="tabg" style="animation-delay:2.0s"><rect class="tab" x="180" y="68" width="26" height="30" rx="13" style="animation-delay:2.0s"/><path class="tick" d="M187 83 l4 4 l8 -9" style="animation-delay:2.0s"/></g><g class="tabg" style="animation-delay:2.4s"><rect class="tab" x="142" y="68" width="26" height="30" rx="13" style="animation-delay:2.4s"/><path class="tick" d="M149 83 l4 4 l8 -9" style="animation-delay:2.4s"/></g><g class="tabg" style="animation-delay:2.8s"><rect class="tab" x="104" y="68" width="26" height="30" rx="13" style="animation-delay:2.8s"/><path class="tick" d="M111 83 l4 4 l8 -9" style="animation-delay:2.8s"/></g><g class="tabg" style="animation-delay:3.2s"><rect class="tab" x="66" y="68" width="26" height="30" rx="13" style="animation-delay:3.2s"/><path class="tick" d="M73 83 l4 4 l8 -9" style="animation-delay:3.2s"/></g><g class="tabg" style="animation-delay:3.6s"><rect class="tab" x="28" y="68" width="26" height="30" rx="13" style="animation-delay:3.6s"/><path class="tick" d="M35 83 l4 4 l8 -9" style="animation-delay:3.6s"/></g>
         <rect class="label" x="22" y="118" width="120" height="8" rx="4"/>
         <rect class="label" x="150" y="118" width="64" height="8" rx="4"/>
-        <g clip-path="url(#stripclip)"><rect class="beam" x="8" y="0" width="224" height="4" rx="2"/></g>
+        <g class="lens"><circle cx="0" cy="0" r="15"/><path d="M11 11 L22 22"/></g>
       </svg>
     </div>
     <h2 id="stagetext">{esc(L['step_upload'])}…</h2>
