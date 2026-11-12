@@ -79,3 +79,9 @@ def test_photo_with_nothing_read_is_never_an_empty_card():
     s = build_schedule(res)
     assert s["unread"] == ["rx.jpg"]
     assert "couldn't read any medicine names" in card_text(s, "en")
+
+
+def test_every_card_has_the_urgent_call_line():
+    from strip_reader.card import card_html
+    s = build_schedule({"images": []})
+    assert "tel:108" in card_html(s, "or") and "108" in card_text(s, "hi")

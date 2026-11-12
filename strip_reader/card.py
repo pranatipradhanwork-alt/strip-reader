@@ -53,6 +53,7 @@ def build_schedule(result: dict, confirmations: dict | None = None, uses_fn=None
     sched["as_needed"], sched["ask"] = [], []
     sched["queued"] = [Path(img["image"]).name for img in result["images"] if img.get("queued")]
     sched["not_medicine"] = [Path(img["image"]).name for img in result["images"] if img.get("not_medicine")]
+    sched["offline"] = [Path(img["image"]).name for img in result["images"] if img.get("offline")]
     # A medicine photo where nothing could be read must never look like "no medicines".
     sched["unread"] = [Path(img["image"]).name for img in result["images"]
                        if not img.get("queued") and not img.get("not_medicine") and not img.get("items")]
@@ -161,6 +162,8 @@ def card_text(sched: dict, lang: str = "en") -> str:
         lines.append(f"\n!! {L['not_medicine'].format(n=len(sched['not_medicine']))}")
     if sched.get("unread"):
         lines.append(f"\n!! {L['nothing_read'].format(n=len(sched['unread']))}")
+    if sched.get("offline"):
+        lines.append(f"\n!! {L['offline_mode']}")
     for key in (*SLOT_ORDER, "as_needed"):
         if key == "evening" and not sched[key]:
             continue
@@ -186,6 +189,7 @@ def card_text(sched: dict, lang: str = "en") -> str:
         lines.append(f"\n{L['confirmed_legend']}")
     if sched["ask"]:
         lines.append(f"\n{L['confirm']}")
+    lines.append(f"\n{L['urgent']}")
     lines.append(f"\n{L['footer']}")
     return "\n".join(lines)
 
@@ -311,6 +315,8 @@ def card_html(sched: dict, lang: str = "en", crops: bool = True, audio: str | No
     if sched.get("unread"):
         parts.append(f"<div class='notice' role='alert'>{icon('alert')}"
                      f"<div>{esc(L['nothing_read'].format(n=len(sched['unread'])))}</div></div>")
+    if sched.get("offline"):
+        parts.append(f"<div class='notice' role='status'>{icon('wifi_off')}<div>{esc(L['offline_mode'])}</div></div>")
     if any(e.get("confirmed_by") for k in (*SLOT_ORDER, "as_needed") for e in sched[k]):
         parts.append(f"<p class='legend'>{icon('check', 18)}{esc(L['confirmed_legend'])}</p>")
     slots = []
@@ -340,6 +346,7 @@ def card_html(sched: dict, lang: str = "en", crops: bool = True, audio: str | No
                      f"</span></h2></div><div><ul class='meds'>{rows}</ul>"
                      f"<p class='confirm-line'>{esc(L['confirm'])}</p></div></section>")
     parts.append(f"<div class='timeline'>{''.join(slots)}</div>")
+    parts.append(f"<a class='urgent' href='tel:108'>{icon('phone', 20)}<span>{esc(L['urgent'])}</span></a>")
     parts.append(f"<p class='card-foot'>{esc(L['footer'])}</p>")
     return (f"<!doctype html><html lang='{lang}'><head>{head('Medicine Card')}</head>"
             f"<body class='has-tabs'>{nav}<main class='sheet'>{''.join(parts)}</main></body></html>")

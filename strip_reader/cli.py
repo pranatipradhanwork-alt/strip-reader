@@ -10,6 +10,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from .offline import offline_read
 from .safety import CONFIRM_MSG, check_item, cross_check, load_medicines, merge_same_medicine
 from . import confirm
 from .leaflets import what_its_for
@@ -27,7 +28,7 @@ def photo_key(path: str | Path, profile: str) -> str:
 
 
 def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | None = None,
-        profile: str = "normal", budget_s: float | None = None) -> dict:
+        profile: str = "normal", budget_s: float | None = None, use_offline: bool = True) -> dict:
     medicines = load_medicines(ROOT / "data" / "medicines.csv")
     all_items, per_image, offline = [], [], False
     for path in images:
@@ -50,13 +51,23 @@ def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | 
                            "items": [], "_checked_by": "quick_check"}
                 else:
                     raw = read_image(img, model, profile, budget_s)
-            except OfflineError:
-                # Keep the photo; never lose it. Stop trying the rest for now.
+            except Exception as e:   # unreachable, busy, out of quota, or any other service error
+                if not isinstance(e, OfflineError):
+                    print(f"  Reading service error ({type(e).__name__}); using the offline reader.", flush=True)
+                # Keep the photo; never lose it. Stop trying the AI service for the rest for now.
                 offline = True
                 QUEUE.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, QUEUE / Path(path).name)
-                per_image.append({"image": path, "queued": True, "items": []})
-                continue
+                # Fallback: read the printed text on this server (no internet needed).
+                raw = None
+                if use_offline:
+                    try:
+                        raw = offline_read(img, medicines)
+                    except Exception as e:   # OCR missing or failed: just queue
+                        print(f"  (offline reader unavailable: {type(e).__name__})", flush=True)
+                if not raw or not raw.get("items"):
+                    per_image.append({"image": path, "queued": True, "items": []})
+                    continue
             CACHE.mkdir(parents=True, exist_ok=True)
             cache.write_text(json.dumps(raw, indent=2, ensure_ascii=False))
         if raw.get("is_medicine_photo") is False or (raw.get("image_type") == "other" and not raw.get("items")):
@@ -75,7 +86,8 @@ def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | 
                 item.reasons.append("also printed as: " + ", ".join(map(str, r["also_printed_as"])))  # info only
             items.append(item)
         per_image.append({"image": path, "image_type": raw.get("image_type"),
-                          "image_quality": raw.get("image_quality"), "items": items})
+                          "image_quality": raw.get("image_quality"), "items": items,
+                          "offline": bool(raw.get("_offline"))})
         all_items += items
     cross_check(all_items)
     for img in per_image:

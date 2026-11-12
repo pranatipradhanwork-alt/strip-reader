@@ -102,6 +102,10 @@ Only what is written is used:
 - If any entry is invalid, nothing is saved.
 - Confirmed items appear on the card with a ✓. Each confirmation records who, when and which fields changed, and can be undone.
 
+## Urgent help
+
+Every card and the home page show **"Feeling very unwell? Call 108 for an ambulance"**, which opens the phone dialler. The app is a reading aid; it never replaces urgent care.
+
 ## Read aloud
 
 `--voice` saves the card as `card.mp3` (or use "read aloud" on the review page).
@@ -117,7 +121,8 @@ Only what is written is used:
 |---|---|
 | Upload fails | Retries with a smaller photo: normal (~200 KB) → low (~80 KB) → tiny (~40 KB, greyscale) |
 | No network | Photo saved to a local queue, never lost; the card says so in the user's language; `--flush-queue` reads it later |
-| Model busy or slow (429/503/504) | Waits and retries, then queues instead of failing |
+| Model busy, slow or out of quota | Waits and retries, then falls back to the **offline reader** |
+| AI service unavailable | **Offline reader** (RapidOCR on the server, under 1 s, no internet): reads printed text and matches it against the medicine list. Timing is never read offline; a strength is used only if it is printed cleanly and agrees with the name. The card says "Basic reading" and offers "Try again" for a full reading. Handwriting can't be read offline, so those photos go to the pharmacist. |
 | Same photo again | Answer reused from a content-hash cache, so it is never uploaded twice |
 | Images can't load | `card.txt` (~1 KB) for SMS/WhatsApp; `--no-crops` for a minimal HTML card |
 
@@ -213,6 +218,7 @@ strip_reader/
   timing.py      timing text -> schedule (explicit only)
   card.py        schedule + text / HTML card
   leaflets.py    leaflet RAG and dose guard
+  offline.py     offline fallback: OCR on printed text + medicine list
   confirm.py     pharmacist confirmation rules
   voice.py       card -> spoken script -> MP3
   app.py         web app: camera/upload -> card, read aloud, pharmacist check, history (Flask)
@@ -225,7 +231,7 @@ data/
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py
-tests/           91 tests, no API key needed
+tests/           103 tests, no API key needed
 ```
 
 ## Testing

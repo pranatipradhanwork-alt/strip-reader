@@ -127,7 +127,7 @@ def card_page(run: Run, lang: str, base: str, voice: bool, uses_fn, speak_fn, ca
     if voice and speak_fn and speak_fn(sched, lang, run.dir / f"card-{lang}.mp3"):
         audio = f"{base}/audio/card-{lang}.mp3"
     retry = ""
-    if can_retry and sched.get("queued"):
+    if can_retry and (sched.get("queued") or sched.get("offline")):
         retry = (f"<form method='post' action='{esc(base)}/retry?lang={lang}' style='margin:0 0 12px'>"
                  f"<button class='btn btn-primary btn-block' type='submit'>{icon('refresh')}"
                  f"{esc(L['try_again'])}</button></form>")
