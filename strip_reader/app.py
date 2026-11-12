@@ -223,7 +223,6 @@ def home_page(lang: str, error: str = "") -> str:
   <div class="reading">
     <div class="read-visual" aria-hidden="true">
       <div class="pop-stage"><span class="pop-tile emoji" style="animation-delay:0.0s"><span class="two-pills"><span>💊</span><span>💊</span></span></span><span class="pop-tile emoji" style="animation-delay:0.9s">🔍</span><span class="pop-tile line" style="animation-delay:1.8s">{icon('strip', 42)}</span><span class="pop-tile line" style="animation-delay:2.7s">{icon('rx', 42)}</span><span class="pop-tile emoji" style="animation-delay:3.6s">🩺</span></div>
-      <div class="thumb" id="scanbox" hidden><img id="scanimg" alt=""><span class="shimmer"></span></div>
       <span id="pillanim" hidden></span>
     </div>
     <h2 id="stagetext">{esc(L['step_upload'])}…</h2>
@@ -371,14 +370,13 @@ SCRIPT = """<script>
   document.querySelectorAll('form.upload, form.sample').forEach(f =>
     f.addEventListener('submit', e => {
       if (f.id === 'upload' && !files.length) { e.preventDefault(); input.click(); return; }
-      stopCam(); startReading(f.id === 'upload' ? files[0] : null);
+      stopCam(); startReading();
     }));
-  // Reading screen: the person's own photo with a moving scan line (or a pill animation for
-  // the sample), and the stages ticked off one by one while the server works.
-  function startReading(photo) {
-    const box = document.getElementById('scanbox'), pill = document.getElementById('pillanim'),
+  // Reading screen: the popping medicine icons and the stages ticked off one by one
+  // while the server works.
+  function startReading() {
+    const pill = document.getElementById('pillanim'),
           items = [...document.querySelectorAll('#stages li')], text = document.getElementById('stagetext');
-    if (photo) { document.getElementById('scanimg').src = URL.createObjectURL(photo); box.hidden = false; pill.hidden = true; }
     let i = 0;
     const show = () => {
       items.forEach((li, k) => { li.className = k < i ? 'st-done' : (k === i ? 'st-now' : ''); });
