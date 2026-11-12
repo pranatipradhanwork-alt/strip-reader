@@ -72,3 +72,10 @@ def test_no_timing_goes_to_ask():
 def test_card_languages_render():
     for lang in ("en", "hi", "or"):
         assert "Metformin" in card_text(build_schedule(_result()), lang)
+
+
+def test_photo_with_nothing_read_is_never_an_empty_card():
+    res = {"images": [{"image": "rx.jpg", "image_type": "prescription", "items": []}]}
+    s = build_schedule(res)
+    assert s["unread"] == ["rx.jpg"]
+    assert "couldn't read any medicine names" in card_text(s, "en")

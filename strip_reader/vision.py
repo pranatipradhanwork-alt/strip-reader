@@ -12,9 +12,20 @@ from PIL import Image, ImageOps
 
 MAX_SIDE = 1600  # shrink big phone photos: faster upload, same reading quality
 
-PROMPT = """You are reading a photo of a medicine strip, medicine box, or prescription.
-List every medicine you can see. For each one return:
+PROMPT_VERSION = "v2"  # bump when the prompt changes, so old cached replies are not reused
+
+PROMPT = """You are reading a photo that should show a medicine strip, medicine box, or prescription.
+First decide is_medicine_photo. It is TRUE for a medicine strip, a medicine box/bottle label, or ANY
+doctor's prescription, including hospital/OPD prescription forms with a printed header and handwritten
+notes, and paper slips with handwritten medicine names. It is FALSE only when the photo clearly shows
+something else (a screen or screenshot, a non-medical document, a person, food, a random object, a
+blank page) -> then image_type = "other" and items = []. If unsure, choose TRUE.
+If it is a medicine photo, list every medicine you can see, including handwritten lines on a
+prescription (read them as best you can and give them low confidence). Ignore packs that are only
+partly visible at the edge of a prescription photo. For each medicine return:
 - name_as_printed: the medicine name exactly as written (brand or generic). Do not correct spelling.
+- generic_as_printed: the generic / composition name printed for that medicine on the pack
+  (e.g. "Cefixime Tablets IP", "Paracetamol"), exactly as written. null if none is printed.
 - strength: the strength exactly as written next to that name (e.g. "500 mg"). null if not visible.
 - timing_text: dosing/timing words exactly as written for that medicine (e.g. "1-0-1", "after food",
   "twice daily"). null if nothing is written. Never guess or add a usual dose.
@@ -29,6 +40,7 @@ Also return image_type ("strip", "box", "prescription", "other") and image_quali
 SCHEMA = {
     "type": "object",
     "properties": {
+        "is_medicine_photo": {"type": "boolean"},
         "image_type": {"type": "string", "enum": ["strip", "box", "prescription", "other"]},
         "image_quality": {"type": "string", "enum": ["good", "blurry", "dark", "cut_off"]},
         "items": {
@@ -37,6 +49,7 @@ SCHEMA = {
                 "type": "object",
                 "properties": {
                     "name_as_printed": {"type": "string", "nullable": True},
+                    "generic_as_printed": {"type": "string", "nullable": True},
                     "strength": {"type": "string", "nullable": True},
                     "timing_text": {"type": "string", "nullable": True},
                     "source": {"type": "string", "enum": [
@@ -48,7 +61,7 @@ SCHEMA = {
             },
         },
     },
-    "required": ["image_type", "image_quality", "items"],
+    "required": ["is_medicine_photo", "image_type", "image_quality", "items"],
 }
 
 
@@ -89,7 +102,46 @@ def _is_network_error(e: Exception) -> bool:
     return isinstance(e, (httpx.TransportError, ConnectionError, TimeoutError, OSError))
 
 
-def read_image(img: Image.Image, model: str | None = None, profile: str = "normal") -> dict:
+CHECK_MODEL = os.getenv("GEMINI_CHECK_MODEL", "gemini-3.5-flash-lite")
+CHECK_TIMEOUT_S = 12
+
+
+def quick_check(img: Image.Image) -> bool | None:
+    """Fast guardrail before the full read: is this a medicine strip, box or prescription?
+
+    Sends a tiny greyscale copy (~15 KB) to the lightest model with a yes/no question.
+    Returns False only when the model is sure it is NOT a medicine photo, so the app can
+    answer in seconds. Any error or slowness returns None: the full read then decides.
+    """
+    from google import genai
+    from google.genai import types
+
+    if not (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")):
+        return None
+    small = img.copy()
+    small.thumbnail((384, 384))
+    buf = io.BytesIO()
+    small.convert("L").save(buf, format="JPEG", quality=60)
+    try:
+        client = genai.Client(http_options=types.HttpOptions(timeout=CHECK_TIMEOUT_S * 1000))
+        r = client.models.generate_content(
+            model=CHECK_MODEL,
+            contents=[types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg"),
+                      "Does this photo show a medicine strip, a medicine box/bottle label, or a doctor's "
+                      "prescription (including hospital/OPD prescription forms and handwritten medicine "
+                      "slips)? Answer false only if it clearly shows something else: a screen or screenshot, "
+                      "a non-medical document, a person, food, an object or a blank page. If unsure, answer true."],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json", temperature=0,
+                response_schema={"type": "object", "properties": {"is_medicine_photo": {"type": "boolean"}},
+                                 "required": ["is_medicine_photo"]}))
+        return bool(json.loads(r.text)["is_medicine_photo"])
+    except Exception:
+        return None
+
+
+def read_image(img: Image.Image, model: str | None = None, profile: str = "normal",
+               budget_s: float | None = None) -> dict:
     """Send the image to Gemini and return the parsed JSON.
 
     Busy errors (429/500/503/504) are retried with a growing wait. When the
@@ -106,7 +158,13 @@ def read_image(img: Image.Image, model: str | None = None, profile: str = "norma
 
     steps = list(PROFILES)[list(PROFILES).index(profile):]   # e.g. ["normal", "low", "tiny"]
     data = prepare(img, profile)
-    client = genai.Client(http_options=types.HttpOptions(timeout=TIMEOUT_S * 1000))
+    start = time.monotonic()
+    timeout = min(TIMEOUT_S, budget_s) if budget_s else TIMEOUT_S
+    client = genai.Client(http_options=types.HttpOptions(timeout=int(timeout * 1000)))
+
+    def over_budget(wait: float) -> bool:
+        """The web app gives up after budget_s instead of making a person wait minutes."""
+        return bool(budget_s) and time.monotonic() - start + wait > budget_s
     model = model or os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     fallback = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")
     net_failures = 0
@@ -135,16 +193,16 @@ def read_image(img: Image.Image, model: str | None = None, profile: str = "norma
                 continue
             if getattr(e, "code", None) not in (429, 500, 503, 504) or daily_limit:
                 raise
-            if attempt == 5:
-                raise OfflineError(f"Gemini still busy ({e.code})") from e
             wait = min(60, 5 * 2 ** attempt)
+            if attempt == 5 or over_budget(wait):
+                raise OfflineError(f"Gemini still busy ({e.code})") from e
             print(f"  Gemini busy ({e.code}), retrying in {wait}s...", flush=True)
             time.sleep(wait)
         except Exception as e:  # dropped connection, timeout, no network
             if not _is_network_error(e):
                 raise
             net_failures += 1
-            if net_failures >= len(steps):
+            if net_failures >= len(steps) or over_budget(5 * net_failures):
                 raise OfflineError(str(e)) from e
             profile = steps[net_failures]
             data = prepare(img, profile)

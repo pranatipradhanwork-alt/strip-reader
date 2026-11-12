@@ -106,6 +106,7 @@ class CheckedItem:
     confidence: float
     box_2d: list[int] | None
     timing_note: str | None = None
+    matched_via: str = "name"        # "name" (brand/generic name) or "generic" (generic printed on the pack)
     crop_path: str | None = None
     status: str = "confirm"          # "ok" or "confirm"
     reasons: list[str] = field(default_factory=list)   # English detail, for the pharmacist
@@ -137,6 +138,16 @@ def clean_strength(raw: str | None) -> tuple[str | None, str | None]:
 def check_item(raw: dict, medicines: list[Medicine]) -> CheckedItem:
     """Apply all safety rules to one item from the vision model."""
     m = match_name(raw.get("name_as_printed"), medicines)
+    via = "name"
+    generic_raw = (raw.get("generic_as_printed") or "").strip()
+    if m.score < MATCH_OK and generic_raw and (raw.get("source") or "") != "handwritten":
+        # New brands appear all the time, but the generic printed on the pack ("Cefixime Tablets IP")
+        # is from a much smaller, stable list. Only an exact-enough generic match counts.
+        g = match_name(generic_raw, [x for x in medicines if x.kind == "generic"])
+        if g.score >= MATCH_OK:
+            brand = (raw.get("name_as_printed") or "").strip()
+            label = f"{brand} ({g.generic})" if brand and brand.lower() != g.generic.lower() else g.generic
+            m, via = Match(label, g.generic, g.score), "generic"
     strength, strength_note = clean_strength(raw.get("strength"))
     timing = (raw.get("timing_text") or "").strip() or None
     source = (raw.get("source") or "unknown").strip().lower()
@@ -155,6 +166,7 @@ def check_item(raw: dict, medicines: list[Medicine]) -> CheckedItem:
         source=source,
         confidence=round(conf, 2),
         box_2d=raw.get("box_2d"),
+        matched_via=via,
     )
 
     if conf < MIN_CONFIDENCE:

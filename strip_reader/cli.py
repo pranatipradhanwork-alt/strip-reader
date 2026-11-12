@@ -15,7 +15,7 @@ from . import confirm
 from .leaflets import what_its_for
 from .voice import speak
 from .card import LANGS, build_schedule, card_html, card_text
-from .vision import PROFILES, OfflineError, crop, load_image, read_image
+from .vision import PROMPT_VERSION, PROFILES, OfflineError, crop, load_image, quick_check, read_image
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / "out" / "cache"   # Gemini replies by photo content: a photo is never sent twice
@@ -23,11 +23,11 @@ QUEUE = ROOT / "out" / "queue"   # photos taken while offline, read later with -
 
 
 def photo_key(path: str | Path, profile: str) -> str:
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16] + f"-{profile}"
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16] + f"-{profile}-{PROMPT_VERSION}"
 
 
 def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | None = None,
-        profile: str = "normal") -> dict:
+        profile: str = "normal", budget_s: float | None = None) -> dict:
     medicines = load_medicines(ROOT / "data" / "medicines.csv")
     all_items, per_image, offline = [], [], False
     for path in images:
@@ -44,7 +44,12 @@ def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | 
             try:
                 if offline:
                     raise OfflineError("network already down")
-                raw = read_image(img, model, profile)
+                if quick_check(img) is False:
+                    # Guardrail answered in seconds: not a medicine photo, so skip the slow full read.
+                    raw = {"is_medicine_photo": False, "image_type": "other", "image_quality": "good",
+                           "items": [], "_checked_by": "quick_check"}
+                else:
+                    raw = read_image(img, model, profile, budget_s)
             except OfflineError:
                 # Keep the photo; never lose it. Stop trying the rest for now.
                 offline = True
@@ -54,6 +59,11 @@ def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | 
                 continue
             CACHE.mkdir(parents=True, exist_ok=True)
             cache.write_text(json.dumps(raw, indent=2, ensure_ascii=False))
+        if raw.get("is_medicine_photo") is False or (raw.get("image_type") == "other" and not raw.get("items")):
+            # Guardrail: not a medicine photo, so nothing from it is used.
+            per_image.append({"image": path, "image_type": "other", "image_quality": raw.get("image_quality"),
+                              "not_medicine": True, "items": []})
+            continue
         items = []
         for n, r in enumerate(merge_same_medicine(raw.get("items", []), medicines), 1):
             item = check_item(r, medicines)
@@ -76,7 +86,10 @@ def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | 
 def show(result: dict) -> None:
     for img in result["images"]:
         if img.get("queued"):
-            print(f"\n=== {img['image']}: no network, saved to {QUEUE} to read later ===")
+            print(f"\n=== {img['image']}: could not read now (no network or service busy); saved to {QUEUE} to read later ===")
+            continue
+        if img.get("not_medicine"):
+            print(f"\n=== {img['image']}: not a medicine strip, box or prescription; nothing used ===")
             continue
         print(f"\n=== {img['image']}  ({img['image_type']}, photo {img['image_quality']}) ===")
         if not img["items"]:

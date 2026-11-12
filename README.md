@@ -10,7 +10,8 @@ Many elderly people can't read the small print on a medicine strip or a doctor's
 
 ## Features
 
-- **Mobile web app:** take or choose a photo, pick English / हिन्दी / ଓଡ଼ିଆ, and get the card with "read aloud" and a pharmacist check, with big text, light and dark mode, and no app install.
+- **Web app:** take a photo (in-page camera on laptops and phones) or choose one, pick English / हिन्दी / ଓଡ଼ିଆ, and get the medicine schedule as a day timeline with "read aloud", a pharmacist check and a private **history** of past readings (kept per browser, no accounts, each reading can be deleted). Two themes: a clean light theme and a dark theme, switched with a toggle (it follows the phone's setting by default); large text throughout.
+- **Guardrails:** a photo that isn't a medicine strip, box or prescription is rejected with a fixed message and nothing from it is used; the app gives up after one minute instead of making someone wait, keeps the photo and offers "Try again".
 - **Reads strips, boxes and prescriptions** with a vision LLM (Gemini) into structured data: name, strength, timing, printed vs handwritten, confidence and the region it was read from.
 - **Verifies every name** against a medicine list of Indian generics and brands (brand → generic).
 - **Abstains when unsure:** low confidence, handwriting, unknown names or missing strengths all lead to *"Please confirm with a pharmacist or doctor."*
@@ -139,6 +140,18 @@ A pilot run on **12 real photos** (6 handwritten prescriptions, 6 printed strips
 
 Upload-size check (3 photos at each size): printed strips read the same at all sizes; handwriting degraded at smaller sizes; no size produced a wrong OK. The photo is therefore shrunk only when the network forces it.
 
+**Unseen photos** (6 photos the app was never tuned on: 2 handwritten prescriptions and 4 strips/boxes of brands not in the medicine list):
+
+| Photo | Result |
+|---|---|
+| Handwritten prescription | 4 handwritten lines read, all marked CONFIRM (low confidence) |
+| Hospital OPD prescription (very unclear handwriting) | No names readable; the card says so and sends the person to a pharmacist |
+| Strip of a new brand with the generic printed (cefixime) | **OK**, matched through the printed generic name |
+| 2 supplement boxes, 1 combination-drug strip | CONFIRM (not in the medicine list) |
+| Wrong item marked OK | **0** |
+
+These photos exposed two bugs that are now fixed: the guardrail rejected a hospital prescription form as "not a medicine photo" (it now accepts any prescription and only rejects photos that are clearly something else), and new brands were never recognised (the app now also matches the generic name printed on the pack, a much smaller and more stable list than brand names).
+
 The pilot is small and the medicine list includes brands seen in it. A larger, unseen, multi-region test set with a labelled evaluation (per-field accuracy, safe-failure rate, unsafe-pass rate) is in progress.
 
 ## Design decisions
@@ -202,7 +215,8 @@ strip_reader/
   leaflets.py    leaflet RAG and dose guard
   confirm.py     pharmacist confirmation rules
   voice.py       card -> spoken script -> MP3
-  app.py         web app: upload photo -> card, read aloud, pharmacist check (Flask)
+  app.py         web app: camera/upload -> card, read aloud, pharmacist check, history (Flask)
+  icons.py       inline line icons
   web.py         card + pharmacist review pages
   static/        style.css (shared by the app and the saved card)
   cli.py         command line
@@ -211,7 +225,7 @@ data/
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py
-tests/           87 tests, no API key needed
+tests/           91 tests, no API key needed
 ```
 
 ## Testing

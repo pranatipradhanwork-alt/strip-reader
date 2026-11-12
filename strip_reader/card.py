@@ -52,6 +52,10 @@ def build_schedule(result: dict, confirmations: dict | None = None, uses_fn=None
     sched = {s: [] for s in SLOT_ORDER}
     sched["as_needed"], sched["ask"] = [], []
     sched["queued"] = [Path(img["image"]).name for img in result["images"] if img.get("queued")]
+    sched["not_medicine"] = [Path(img["image"]).name for img in result["images"] if img.get("not_medicine")]
+    # A medicine photo where nothing could be read must never look like "no medicines".
+    sched["unread"] = [Path(img["image"]).name for img in result["images"]
+                       if not img.get("queued") and not img.get("not_medicine") and not img.get("items")]
     for img in result["images"]:
         for n, i in enumerate(img["items"], 1):
             iid = item_id(img.get("image", "photo"), n)
@@ -153,6 +157,10 @@ def card_text(sched: dict, lang: str = "en") -> str:
     lines = [f"===== {L['title']} ====="]
     if sched.get("queued"):
         lines.append(f"\n!! {L['queued'].format(n=len(sched['queued']))}")
+    if sched.get("not_medicine"):
+        lines.append(f"\n!! {L['not_medicine'].format(n=len(sched['not_medicine']))}")
+    if sched.get("unread"):
+        lines.append(f"\n!! {L['nothing_read'].format(n=len(sched['unread']))}")
     for key in (*SLOT_ORDER, "as_needed"):
         if key == "evening" and not sched[key]:
             continue
@@ -224,18 +232,43 @@ def _img_tag(path: str | None) -> str:
 
 
 STYLE = (Path(__file__).resolve().parent / "static" / "style.css").read_text(encoding="utf-8")
-ICONS = {"morning": "☀️", "afternoon": "🌤️", "evening": "🌇", "night": "🌙", "as_needed": "⏱️"}
+FONTS = ""  # system fonts (SF / Roboto / Noto): native look, nothing to download on a weak network
+# Light or dark: the saved choice, else the phone's setting. Runs before the page draws (no flash).
+THEME_JS = """<script>
+(function () {
+  var t = null; try { t = localStorage.getItem('sr-theme'); } catch (e) {}
+  if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('details.lang-menu[open]').forEach(function (d) {   // close menu on outside tap
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+    var b = e.target.closest && e.target.closest('.theme-toggle'); if (!b) return;
+    var n = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', n);
+    try { localStorage.setItem('sr-theme', n); } catch (e) {}
+  });
+})();
+</script>"""
+SLOT_ICONS = {"morning": "sun", "afternoon": "sun_high", "evening": "sunset", "night": "moon", "as_needed": "clock"}
+
+
+def head(title: str) -> str:
+    """<head> shared by every page: fonts (fall back to the phone's own if offline) + inline styles."""
+    return (f"<meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"
+            f"<title>{html.escape(title)}</title>{THEME_JS}{FONTS}<style>{STYLE}</style>")
 
 
 def _med_html(e: dict, L: dict, img) -> str:
-    """One medicine row: amount, name, chips (food / days / reason), used-for, label picture."""
+    """One medicine: amount, name, tags (food / days / reason), used-for, label picture."""
+    from .icons import icon
     esc = html.escape
     t = e.get("timing") or {}
     amt = ""
     if e.get("amount"):
         a = {0.5: "½", 0.25: "¼"}.get(e["amount"], f"{e['amount']:g}")
-        amt = f"<span class='amt'>{a} ×</span>"
-    tick = " <span class='tick' title='checked by a pharmacist'>✓</span>" if e.get("confirmed_by") else ""
+        amt = f"<span class='amt' title='amount'>{a}</span>"
+    tick = (f" <span class='tick'>{icon('check', 16)}{esc(L['pharmacist'])}</span>" if e.get("confirmed_by") else "")
     chips = []
     if t.get("reason"):
         chips.append(t["reason"])
@@ -252,30 +285,44 @@ def _med_html(e: dict, L: dict, img) -> str:
 
 def card_html(sched: dict, lang: str = "en", crops: bool = True, audio: str | None = None,
               nav: str = "", actions: str = "") -> str:
-    """One self-contained HTML page (styles inline), so the card can be saved or shared as a file.
+    """The medicine card as one self-contained page: a day timeline (morning -> night).
 
-    `nav` and `actions` let the web app add its top bar and buttons around the same card.
+    `nav` and `actions` let the web app add its header and buttons around the same card.
     """
+    from .icons import icon
     L = labels(lang)
     esc = html.escape
     img = _img_tag if crops else (lambda _p: "")
-    parts = [f"<header class='card-head'><h1>{esc(L['title'])}</h1></header>"]
+    on_card = len({e.get("id") or e["name"] for k in (*SLOT_ORDER, "as_needed") for e in sched[k]})
+    parts = [f"<header class='page-head'><p class='kicker'>{esc(L['card_kicker'])}</p>"
+             f"<h1>{esc(L['title'])}</h1>"
+             f"<p class='meta'>{esc(L['meta'].format(a=on_card, b=len(sched['ask'])))}</p></header>"]
     if actions:
-        parts.append(f"<div class='card-actions'>{actions}</div>")
+        parts.append(f"<div class='toolbar'>{actions}</div>")
     if audio:
-        parts.append(f"<div class='listen'>🔊 {esc(L['listen'])}<audio controls preload='none' "
-                     f"src='{esc(audio)}'></audio></div>")
+        parts.append(f"<div class='listen'><div class='row'>{icon('speaker')}{esc(L['listen'])}</div>"
+                     f"<audio controls preload='none' src='{esc(audio)}'></audio></div>")
     if sched.get("queued"):
-        parts.append(f"<p class='banner banner-warn'>📶 {esc(L['queued'].format(n=len(sched['queued'])))}</p>")
+        parts.append(f"<div class='notice' role='status'>{icon('wifi_off')}"
+                     f"<div>{esc(L['queued'].format(n=len(sched['queued'])))}</div></div>")
+    if sched.get("not_medicine"):
+        parts.append(f"<div class='notice' role='alert'>{icon('block')}"
+                     f"<div>{esc(L['not_medicine'].format(n=len(sched['not_medicine'])))}</div></div>")
+    if sched.get("unread"):
+        parts.append(f"<div class='notice' role='alert'>{icon('alert')}"
+                     f"<div>{esc(L['nothing_read'].format(n=len(sched['unread'])))}</div></div>")
     if any(e.get("confirmed_by") for k in (*SLOT_ORDER, "as_needed") for e in sched[k]):
-        parts.append(f"<p class='legend'>{esc(L['confirmed_legend'])}</p>")
+        parts.append(f"<p class='legend'>{icon('check', 18)}{esc(L['confirmed_legend'])}</p>")
+    slots = []
     for key in (*SLOT_ORDER, "as_needed"):
         if key in ("evening", "as_needed") and not sched[key]:
             continue
         rows = "".join(_med_html(e, L, img) for e in sched[key]) \
             or f"<li class='med none'>{esc(L['none'])}</li>"
-        parts.append(f"<section class='slot slot-{key}'><h2><span class='ico'>{ICONS[key]}</span>"
-                     f"{esc(L[key])}</h2><ul class='meds'>{rows}</ul></section>")
+        count = f"<span class='slot-count'>{esc(L['count_meds'].format(n=len(sched[key])))}</span>" if sched[key] else ""
+        slots.append(f"<section class='slot slot-{key}'><div class='slot-head'><span class='slot-ico'>"
+                     f"{icon(SLOT_ICONS[key], 28)}</span><h2>{esc(L[key])}{count}</h2></div>"
+                     f"<ul class='meds'>{rows}</ul></section>")
 
     def ask_row(e):
         read = timing_summary(e["timing"], L)
@@ -288,13 +335,11 @@ def card_html(sched: dict, lang: str = "en", crops: bool = True, audio: str | No
 
     if sched["ask"]:
         rows = "".join(ask_row(e) for e in sched["ask"])
-        parts.append(f"<section class='slot ask'><h2><span class='ico'>⚠️</span>{esc(L['ask'])}</h2>"
-                     f"<ul class='meds'>{rows}</ul><p class='confirm-line'>{esc(L['confirm'])}</p></section>")
+        slots.append(f"<section class='slot ask'><div class='slot-head'><span class='slot-ico'>{icon('alert', 28)}</span>"
+                     f"<h2>{esc(L['ask'])}<span class='slot-count'>{esc(L['count_meds'].format(n=len(sched['ask'])))}"
+                     f"</span></h2></div><div><ul class='meds'>{rows}</ul>"
+                     f"<p class='confirm-line'>{esc(L['confirm'])}</p></div></section>")
+    parts.append(f"<div class='timeline'>{''.join(slots)}</div>")
     parts.append(f"<p class='card-foot'>{esc(L['footer'])}</p>")
-    return f"""<!doctype html>
-<html lang="{lang}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f766e">
-<title>Medicine Card</title>
-<style>{STYLE}</style></head>
-<body>{nav}<main class="wrap">{''.join(parts)}</main></body></html>"""
+    return (f"<!doctype html><html lang='{lang}'><head>{head('Medicine Card')}</head>"
+            f"<body class='has-tabs'>{nav}<main class='sheet'>{''.join(parts)}</main></body></html>")

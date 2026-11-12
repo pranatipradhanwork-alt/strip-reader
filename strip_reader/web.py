@@ -18,7 +18,8 @@ from flask import Flask, Response, redirect, request
 
 from . import confirm
 from .card import LANGS, _img_tag, build_schedule, card_html, labels
-from .card import STYLE
+from .card import head
+from .icons import icon
 from .leaflets import what_its_for
 from .voice import speak
 
@@ -83,23 +84,41 @@ class Run:
 # ---------- shared page pieces ----------
 
 def topbar(lang: str, lang_href, right: str = "") -> str:
-    """Brand + language switch. lang_href(code) gives the link for each language."""
+    """Logo + Read/History (left); language menu + theme toggle (right).
+
+    lang_href(code) gives the link for each language. `right` holds the Read/History links.
+    """
     esc = html.escape
-    langs = "".join(
-        f"<a href='{esc(lang_href(code))}' aria-current='{str(code == lang).lower()}'>{LANG_LABELS.get(code, code)}</a>"
+    options = "".join(
+        f"<a href='{esc(lang_href(code))}' role='menuitem'{' aria-current=\'true\'' if code == lang else ''}>"
+        f"<span>{LANG_LABELS.get(code, code)}</span>{icon('check', 16) if code == lang else ''}</a>"
         for code in LANGS)
-    return (f"<header class='topbar'><div class='wrap'><a class='brand' href='/'><span class='brand-mark'>💊</span>"
-            f"Strip Reader</a><span class='spacer'></span>{right}<nav class='langs'>{langs}</nav></div></header>")
+    menu = (f"<details class='lang-menu'><summary aria-label='Language'>{icon('globe', 18)}"
+            f"<span class='lang-name'>{LANG_LABELS.get(lang, lang)}</span>{icon('chevron', 16)}</summary>"
+            f"<div class='lang-list' role='menu'>{options}</div></details>")
+    toggle = (f"<button class='theme-toggle' type='button' aria-label='Light or dark theme'>"
+              f"<span class='sun'>{icon('sun', 20)}</span><span class='moon'>{icon('moon', 20)}</span></button>")
+    return (f"<header class='topbar'><div class='wrap'><a class='brand' href='/'><span class='brand-mark'>"
+            f"{icon('logo', 20)}</span><span class='brand-text'>Strip Reader</span></a>{right}"
+            f"<span class='spacer'></span>{menu}{toggle}</div></header>")
 
 
-def page(title: str, body: str, lang: str = "en", bar: str = "") -> str:
-    return (f"<!doctype html><html lang='{lang}'><head><meta charset='utf-8'>"
-            f"<meta name='viewport' content='width=device-width, initial-scale=1'>"
-            f"<meta name='theme-color' content='#0f766e'><title>{html.escape(title)}</title>"
-            f"<style>{STYLE}</style></head><body>{bar}<main class='wrap'>{body}</main></body></html>")
+def tabbar(lang: str, current: str = "read") -> str:
+    """Bottom tab bar on phones (Read / History), like a native app."""
+    L = labels(lang)
+    esc = html.escape
+    tab = lambda key, href, ico, text: (f"<a href='{href}'{' aria-current=\'page\'' if current == key else ''}>"
+                                        f"{icon(ico, 22)}{esc(text)}</a>")
+    return (f"<nav class='tabbar' aria-label='Main'>{tab('read', f'/?lang={lang}', 'camera', L['read_tab'])}"
+            f"{tab('history', f'/history?lang={lang}', 'clock', L['history'])}</nav>")
 
 
-def card_page(run: Run, lang: str, base: str, voice: bool, uses_fn, speak_fn) -> str:
+def page(title: str, body: str, lang: str = "en", bar: str = "", tabs: str = "") -> str:
+    return (f"<!doctype html><html lang='{lang}'><head>{head(title)}</head>"
+            f"<body class='has-tabs'>{bar}<main class='wrap'>{body}</main>{tabs}</body></html>")
+
+
+def card_page(run: Run, lang: str, base: str, voice: bool, uses_fn, speak_fn, can_retry: bool = False) -> str:
     """The card with the app's top bar and buttons. `base` is the URL prefix of this run."""
     L = labels(lang)
     esc = html.escape
@@ -107,12 +126,28 @@ def card_page(run: Run, lang: str, base: str, voice: bool, uses_fn, speak_fn) ->
     audio = None
     if voice and speak_fn and speak_fn(sched, lang, run.dir / f"card-{lang}.mp3"):
         audio = f"{base}/audio/card-{lang}.mp3"
-    actions = (f"<div class='btn-row'>"
-               f"<a class='btn btn-primary' href='{esc(base)}/card?lang={lang}&voice=1'><span class='i'>🔊</span>{esc(L['read_aloud'])}</a>"
-               f"<a class='btn btn-ghost' href='/?lang={lang}'><span class='i'>📷</span>{esc(L['new_photo'])}</a>"
-               f"<a class='btn btn-ghost' href='{esc(base)}/review?lang={lang}'><span class='i'>🧑‍⚕️</span>{esc(L['pharmacist'])}</a></div>")
-    bar = topbar(lang, lambda c: f"{base}/card?lang={c}")
+    retry = ""
+    if can_retry and sched.get("queued"):
+        retry = (f"<form method='post' action='{esc(base)}/retry?lang={lang}' style='margin:0 0 12px'>"
+                 f"<button class='btn btn-primary btn-block' type='submit'>{icon('refresh')}"
+                 f"{esc(L['try_again'])}</button></form>")
+    actions = retry + (f"<div class='btn-row'>"
+               f"<a class='btn btn-primary' href='{esc(base)}/card?lang={lang}&voice=1'>{icon('speaker')}{esc(L['read_aloud'])}</a>"
+               f"<a class='btn btn-outline' href='/?lang={lang}'>{icon('camera')}{esc(L['new_photo'])}</a>"
+               f"<a class='btn btn-quiet' href='{esc(base)}/review?lang={lang}'>{icon('check_user')}{esc(L['pharmacist'])}</a></div>")
+    bar = topbar(lang, lambda c: f"{base}/card?lang={c}", right=history_link(lang) if can_retry else "")
+    if can_retry:   # the full app (not the single-run review tool) has the bottom tabs
+        bar += tabbar(lang, "")
     return card_html(sched, lang, audio=audio, nav=bar, actions=actions)
+
+
+def history_link(lang: str, current: str = "") -> str:
+    """Top-bar links (laptops): Read and History, current page highlighted. Phones use the bottom tab bar."""
+    L = labels(lang)
+    link = lambda key, href, text: (f"<a class='navlink' href='{href}'"
+                                    f"{' aria-current=\'page\'' if key == current else ''}>{html.escape(text)}</a>")
+    return (f"<nav class='navlinks'>{link('read', f'/?lang={lang}', L['read_tab'])}"
+            f"{link('history', f'/history?lang={lang}', L['history'])}</nav>")
 
 
 def review_page(run: Run, base: str, lang: str = "en", errors=None, form=None) -> str:
@@ -130,7 +165,7 @@ def review_page(run: Run, base: str, lang: str = "en", errors=None, form=None) -
         status = ""
         if c:
             label = "confirmed" if c["action"] == "confirm" else "marked not a medicine"
-            status = (f"<div class='done'>✓ {label} by {esc(c['by'])}<button formaction='{esc(base)}/undo/{esc(iid)}' "
+            status = (f"<div class='done'>{icon('check', 18)}{label} by {esc(c['by'])}<button formaction='{esc(base)}/undo/{esc(iid)}' "
                       f"formmethod='post' formnovalidate>undo</button></div>")
         err = "".join(f"<div class='err'>{esc(e)}</div>" for e in errors.get(iid, []))
         why = "; ".join(i.get("reasons") or [])
@@ -159,8 +194,8 @@ def review_page(run: Run, base: str, lang: str = "en", errors=None, form=None) -
   <h1>Pharmacist check</h1>
   <p>Look at each label picture. Fix anything wrong, then choose "confirm". Only confirmed items go on the card.</p>
   <div class="field"><label>Your name <input name="by" value="{by}" required></label></div>
-  <div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" type="submit">Save and show card</button>
-  <a class="btn btn-ghost" href="{esc(base)}/card?lang={lang}">See card</a></div>
+  <div class="btn-row" style="margin-top:16px"><button class="btn btn-primary" type="submit">Save and show card</button>
+  <a class="btn btn-outline" href="{esc(base)}/card?lang={lang}">See card</a></div>
 </div>
 {body_rows}
 </form>"""

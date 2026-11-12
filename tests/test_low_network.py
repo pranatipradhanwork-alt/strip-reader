@@ -30,8 +30,8 @@ def test_offline_photo_is_queued_not_lost(tmp_path, monkeypatch):
     assert len(calls) == 1                                   # stops trying after the first failure
     assert sorted(p.name for p in (tmp_path / "queue").iterdir()) == ["fake_strip.png", "printed_rx.png"]
     sched = build_schedule(result)
-    assert sched["queued"] and "No network" in card_text(sched, "en")
-    assert "ନେଟୱାର୍କ" in card_text(sched, "or")
+    assert sched["queued"] and "Couldn't read right now" in card_text(sched, "en")
+    assert "ସେଭ୍" in card_text(sched, "or")
 
 
 def test_same_photo_is_never_sent_twice(tmp_path, monkeypatch):
