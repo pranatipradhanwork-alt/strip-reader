@@ -34,6 +34,12 @@ def test_home_in_each_language(client, lang, word):
     assert 'capture="environment"' in r.data.decode() and 'getUserMedia' in r.data.decode()
 
 
+def test_home_script_has_no_unfilled_placeholders(client):
+    page = client.get("/?lang=en").data.decode()
+    assert "__CHOSEN__" not in page and "__BLOCKED__" not in page and "__ALLOW__" not in page
+    assert "Starting the camera" in page
+
+
 def test_sample_goes_to_card(client):
     r = client.post("/sample", data={"lang": "or"})
     assert r.status_code == 302 and "/card?lang=or" in r.headers["Location"]

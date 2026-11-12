@@ -215,9 +215,10 @@ def home_page(lang: str, error: str = "") -> str:
 </section>
 <div class="cam" id="cam" hidden>
   <video id="video" playsinline autoplay muted></video>
-  <p class="cam-hint">{esc(L['cam_hint'])}</p>
+  <p class="cam-hint" id="camhint">{esc(L['cam_allow'])}</p>
   <div class="btn-row">
-    <button type="button" class="btn btn-primary" id="shoot">{icon('camera')}{esc(L['capture'])}</button>
+    <label for="photos" class="btn btn-outline" id="campick" hidden>{icon('image')}{esc(L['choose_photo'])}</label>
+    <button type="button" class="btn btn-primary" id="shoot" disabled>{icon('camera')}{esc(L['capture'])}</button>
     <button type="button" class="btn btn-quiet" id="camdone">{esc(L['done'])}</button>
   </div>
 </div>
@@ -237,9 +238,10 @@ def home_page(lang: str, error: str = "") -> str:
     <p class="wait-note">{esc(L['reading_wait'])}</p>
   </div>
 </div>
-{SCRIPT}"""
+{{SCRIPT}}"""
     script = SCRIPT.replace("__CHOSEN__", json.dumps(L["photos_chosen"])).replace(
-        "__BLOCKED__", json.dumps(L["camera_blocked"])).replace("__MAX__", str(MAX_PHOTOS))
+        "__BLOCKED__", json.dumps(L["camera_blocked"])).replace("__MAX__", str(MAX_PHOTOS)).replace(
+        "__ALLOW__", json.dumps(L["cam_allow"])).replace("__TIP__", json.dumps(L["cam_hint"]))
     return page(L["app_name"], body.replace("{SCRIPT}", script), lang,
                 topbar(lang, lambda c: f"/?lang={c}", right=history_link(lang, "read")), tabbar(lang, "read"))
 
@@ -273,7 +275,7 @@ SCRIPT = """<script>
         previews = document.getElementById('previews'), count = document.getElementById('count'),
         loading = document.getElementById('loading'), cam = document.getElementById('cam'),
         video = document.getElementById('video');
-  const chosen = __CHOSEN__, blocked = __BLOCKED__, MAX = __MAX__;
+  const chosen = __CHOSEN__, blocked = __BLOCKED__, allow = __ALLOW__, tip = __TIP__, MAX = __MAX__;
   let files = [], stream = null;
 
   // One list of photos from the gallery and the camera, put back into the form's file input.
@@ -292,14 +294,26 @@ SCRIPT = """<script>
   phonecam.addEventListener('change', () => { files = files.concat([...phonecam.files]); sync(); });
 
   // Live camera in the page (laptops and phones); if not allowed, the phone's own camera app.
+  // The camera screen opens at once, so the tap always does something. It asks the person to
+  // allow the camera; if the browser refuses (or never answers), it offers "Choose photo".
+  const hint = document.getElementById('camhint'), shoot = document.getElementById('shoot'),
+        pick = document.getElementById('campick');
+  function camFailed() {
+    if (stream) return;
+    if (/Android|iPhone|iPad/i.test(navigator.userAgent)) { stopCam(); phonecam.click(); return; }
+    hint.textContent = blocked; pick.hidden = false; shoot.hidden = true;
+  }
   document.getElementById('camera').addEventListener('click', async () => {
+    hint.textContent = allow; pick.hidden = true; shoot.hidden = false; shoot.disabled = true; cam.hidden = false;
+    const waited = setTimeout(camFailed, 12000);
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 } } });
-      video.srcObject = stream; cam.hidden = false;
-    } catch (e) {
-      if (/Android|iPhone|iPad/i.test(navigator.userAgent)) phonecam.click(); else alert(blocked);
-    }
+      clearTimeout(waited);
+      if (cam.hidden) { stopCam(); return; }          // closed while waiting
+      video.srcObject = stream; hint.textContent = tip; shoot.disabled = false; pick.hidden = true; shoot.hidden = false;
+    } catch (e) { clearTimeout(waited); camFailed(); }
   });
+  pick.addEventListener('click', () => stopCam());
   document.getElementById('shoot').addEventListener('click', () => {
     const c = document.createElement('canvas');
     c.width = video.videoWidth; c.height = video.videoHeight;
