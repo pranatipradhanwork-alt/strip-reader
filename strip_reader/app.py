@@ -113,16 +113,13 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
             return home_page(lang, labels(lang)["no_photo"]), 400
         rid, d = new_run()
         saved = []
-        for n, f in enumerate(files, 1):
-            ext = Path(f.filename).suffix.lower() or ".jpg"
-            path = d / "photos" / f"photo{n}{ext if ext in ('.jpg', '.jpeg', '.png', '.webp') else '.jpg'}"
-            f.save(path)
+        for f in files:
             try:
-                with Image.open(path) as im:
-                    im.verify()
+                saved += save_upload(f, d / "photos", len(saved) + 1, MAX_PHOTOS - len(saved))
             except Exception:
                 return home_page(lang, labels(lang)["bad_photo"]), 400
-            saved.append(str(path))
+            if len(saved) >= MAX_PHOTOS:
+                break
         return finish(rid, d, saved)
 
     @app.post("/sample")
@@ -191,7 +188,7 @@ def home_page(lang: str, error: str = "") -> str:
     {err}
     <form class="upload stack" method="post" action="/read" enctype="multipart/form-data" id="upload">
       <input type="hidden" name="lang" value="{lang}">
-      <input type="file" id="photos" name="photos" accept="image/*" multiple>
+      <input type="file" id="photos" name="photos" accept="image/*,.heic,.heif,.pdf,application/pdf" multiple>
       <input type="file" id="phonecam" accept="image/*" capture="environment">
       <button type="button" class="btn btn-dark btn-block" id="camera">{icon('camera')}{esc(L['take_photo'])}</button>
       <label for="photos" class="btn btn-outline btn-block">{icon('image')}{esc(L['choose_photo'])}</label>
@@ -246,6 +243,44 @@ def home_page(lang: str, error: str = "") -> str:
                 topbar(lang, lambda c: f"/?lang={c}", right=history_link(lang, "read")), tabbar(lang, "read"))
 
 
+PHOTO_EXTS = (".jpg", ".jpeg", ".png", ".webp")
+MAX_PDF_PAGES = 3   # a prescription is 1-2 pages; a long PDF is almost surely something else
+
+
+def save_upload(f, folder: Path, n: int, room: int) -> list[str]:
+    """Save one uploaded file as photo(s) the reader can use.
+
+    Photos (JPG, PNG, WEBP) are kept as they are. iPhone photos (HEIC) become JPG.
+    A PDF (prescriptions often arrive as PDF) becomes one PNG per page, up to `room` pages.
+    Raises if the file is not something we can read.
+    """
+    ext = Path(f.filename or "").suffix.lower()
+    data = f.read()
+    if ext == ".pdf" or data[:5] == b"%PDF-":
+        import pypdfium2 as pdfium
+        pdf = pdfium.PdfDocument(data)
+        out = []
+        for k in range(min(len(pdf), room, MAX_PDF_PAGES)):
+            path = folder / f"photo{n + k}.png"
+            pdf[k].render(scale=200 / 72).to_pil().convert("RGB").save(path)   # 200 dpi: small print stays readable
+            out.append(str(path))
+        if not out:
+            raise ValueError("empty PDF")
+        return out
+    if ext in (".heic", ".heif"):
+        import io
+        from pillow_heif import register_heif_opener
+        register_heif_opener()
+        path = folder / f"photo{n}.jpg"
+        Image.open(io.BytesIO(data)).convert("RGB").save(path, quality=92)
+        return [str(path)]
+    path = folder / f"photo{n}{ext if ext in PHOTO_EXTS else '.jpg'}"
+    path.write_bytes(data)
+    with Image.open(path) as im:
+        im.verify()
+    return [str(path)]
+
+
 def history_page(lang: str, runs: list[dict]) -> str:
     L = labels(lang)
     esc = html.escape
@@ -285,10 +320,17 @@ SCRIPT = """<script>
     input.files = dt.files;
     previews.innerHTML = '';
     files.slice(0, MAX).forEach(f => {
-      const img = document.createElement('img'); img.alt = ''; img.src = URL.createObjectURL(f); previews.appendChild(img);
+      if (/^image\/(jpeg|png|webp|gif)$/.test(f.type)) {
+        const img = document.createElement('img'); img.alt = ''; img.src = URL.createObjectURL(f); previews.appendChild(img);
+      } else {   // PDF or iPhone HEIC: the browser can't show it, so show the file type
+        const chip = document.createElement('span'); chip.className = 'file-chip';
+        chip.textContent = (f.name.split('.').pop() || 'file').toUpperCase(); chip.title = f.name; previews.appendChild(chip);
+      }
     });
     count.hidden = !files.length; count.textContent = chosen.replace('{n}', Math.min(files.length, MAX));
-    document.getElementById('go').hidden = !files.length;   // one clear next step at a time
+    const go = document.getElementById('go');
+    go.hidden = !files.length;   // one clear next step at a time
+    if (files.length) { go.scrollIntoView({ behavior: 'smooth', block: 'center' }); go.classList.add('pulse'); }
   }
   input.addEventListener('change', () => { files = files.concat([...input.files]); sync(); });
   phonecam.addEventListener('change', () => { files = files.concat([...phonecam.files]); sync(); });

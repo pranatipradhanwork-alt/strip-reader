@@ -151,3 +151,28 @@ def test_history_lists_only_this_browsers_readings_and_can_delete(tmp_path, monk
     assert other.post(f"/r/{rid}/delete").status_code == 404                     # and can't delete it
     me.post(f"/r/{rid}/delete?lang=en")
     assert me.get(loc).status_code == 404 and "No readings yet" in me.get("/history?lang=en").data.decode()
+
+
+def test_save_upload_turns_pdf_pages_and_heic_into_photos(tmp_path):
+    from werkzeug.datastructures import FileStorage
+    from pillow_heif import register_heif_opener
+    from strip_reader.app import save_upload
+    register_heif_opener()
+    pdf = io.BytesIO()
+    Image.new("RGB", (300, 400), "white").save(pdf, format="PDF", save_all=True,
+                                                append_images=[Image.new("RGB", (300, 400), "white")])
+    paths = save_upload(FileStorage(io.BytesIO(pdf.getvalue()), "rx.pdf"), tmp_path, 1, 6)
+    assert len(paths) == 2 and all(Image.open(p).format == "PNG" for p in paths)
+    assert len(save_upload(FileStorage(io.BytesIO(pdf.getvalue()), "rx.pdf"), tmp_path, 3, 1)) == 1   # page limit
+    heic = io.BytesIO()
+    Image.new("RGB", (40, 40), "white").save(heic, format="HEIF")
+    [p] = save_upload(FileStorage(io.BytesIO(heic.getvalue()), "IMG_1.HEIC"), tmp_path, 4, 6)
+    assert Image.open(p).format == "JPEG"
+
+
+def test_upload_pdf_goes_to_card(client):
+    pdf = io.BytesIO()
+    Image.new("RGB", (300, 400), "white").save(pdf, format="PDF")
+    r = client.post("/read", data={"lang": "en", "photos": (io.BytesIO(pdf.getvalue()), "prescription.pdf")},
+                    content_type="multipart/form-data")
+    assert r.status_code == 302

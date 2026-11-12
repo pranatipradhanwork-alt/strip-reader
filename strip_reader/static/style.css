@@ -165,6 +165,10 @@ html[data-theme="dark"] .theme-toggle .moon { display: block; }
 .previews { display: flex; gap: 8px; flex-wrap: wrap; }
 .previews:empty { display: none; }
 .previews img { width: 68px; height: 68px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); }
+.file-chip { width: 68px; height: 68px; border-radius: 12px; border: 1px solid var(--line); display: grid; place-items: center;
+  font-size: 13px; font-weight: 700; color: var(--muted); background: var(--surface-2); }
+.btn.pulse { animation: gopulse 1.6s ease-out 2; }
+@keyframes gopulse { 0% { box-shadow: 0 0 0 0 rgba(232, 51, 90, .45); } 100% { box-shadow: 0 0 0 14px rgba(232, 51, 90, 0); } }
 .count { font-size: 15px; color: var(--muted); margin: 0; }
 .or-line { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 15px; margin: 18px 0 10px; }
 .or-line::before, .or-line::after { content: ""; flex: 1; height: 1px; background: var(--line); }
