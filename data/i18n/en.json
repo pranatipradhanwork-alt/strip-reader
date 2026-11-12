@@ -92,5 +92,7 @@
   "step_read": "Reading medicine names",
   "step_check": "Checking against the medicine list",
   "step_card": "Preparing your card",
-  "nothing_read": "We couldn't read any medicine names in {n} photo(s). Please show it to your pharmacist or doctor."
+  "nothing_read": "We couldn't read any medicine names in {n} photo(s). Please show it to your pharmacist or doctor.",
+  "offline_mode": "Basic reading: the full reading service wasn't available, so only clearly printed names were checked on this phone's server. Tap \"Try again\" later for a full reading.",
+  "urgent": "Feeling very unwell? Call 108 for an ambulance"
 }

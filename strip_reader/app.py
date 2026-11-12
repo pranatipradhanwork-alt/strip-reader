@@ -210,6 +210,7 @@ def home_page(lang: str, error: str = "") -> str:
 <section class="steps">
   <h2>{esc(L['how_title'])}</h2>
   <ol><li>{esc(L['step1'])}</li><li>{esc(L['step2'])}</li><li>{esc(L['step3'])}</li></ol>
+  <a class="urgent" href="tel:108">{icon('phone', 20)}<span>{esc(L['urgent'])}</span></a>
   <p class="disclaimer">{esc(L['footer'])}</p>
 </section>
 <div class="cam" id="cam" hidden>

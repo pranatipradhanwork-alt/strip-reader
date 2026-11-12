@@ -191,7 +191,9 @@ def read_image(img: Image.Image, model: str | None = None, profile: str = "norma
                 print(f"  Daily free limit reached for {model}; switching to {fallback}.", flush=True)
                 model = fallback
                 continue
-            if getattr(e, "code", None) not in (429, 500, 503, 504) or daily_limit:
+            if daily_limit:
+                raise OfflineError(f"daily free limit reached ({model})") from e   # fall back, don't crash
+            if getattr(e, "code", None) not in (429, 500, 503, 504):
                 raise
             wait = min(60, 5 * 2 ** attempt)
             if attempt == 5 or over_budget(wait):

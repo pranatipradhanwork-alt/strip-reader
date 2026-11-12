@@ -301,6 +301,10 @@ html[data-theme="light"] .pop-tile, :root:not([data-theme]) .pop-tile { backgrou
 .why, .read { font-size: 15px; color: var(--muted); margin-top: 4px; }
 details { font-size: 13px; color: var(--muted); margin-top: 8px; }
 .confirm-line { margin: 0; padding: 12px 0 10px; font-weight: 700; color: var(--warn); border-top: 1px solid var(--warn-line); }
+.urgent { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 22px 0 0; padding: 14px 16px;
+          border-radius: 14px; border: 1px solid color-mix(in srgb, var(--err) 35%, transparent);
+          background: color-mix(in srgb, var(--err) 7%, var(--surface)); color: var(--err); font-weight: 700; text-decoration: none; }
+.urgent:hover { background: color-mix(in srgb, var(--err) 12%, var(--surface)); }
 .card-foot { font-size: 15px; color: var(--muted); text-align: center; margin: 24px 0 40px; }
 
 /* ---------- pharmacist page ---------- */

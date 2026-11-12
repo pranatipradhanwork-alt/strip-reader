@@ -25,7 +25,7 @@ def test_offline_photo_is_queued_not_lost(tmp_path, monkeypatch):
 
     monkeypatch.setattr(cli, "read_image", no_network)
     photos = [str(FIX / "printed_rx.png"), str(FIX / "fake_strip.png")]
-    result = cli.run(photos, tmp_path / "out")
+    result = cli.run(photos, tmp_path / "out", use_offline=False)
     assert all(i.get("queued") for i in result["images"])
     assert len(calls) == 1                                   # stops trying after the first failure
     assert sorted(p.name for p in (tmp_path / "queue").iterdir()) == ["fake_strip.png", "printed_rx.png"]
@@ -100,3 +100,23 @@ def test_gives_up_to_queue_after_smallest(monkeypatch):
     monkeypatch.setattr(vision.time, "sleep", lambda s: None)
     with pytest.raises(OfflineError):
         vision.read_image(load_image(FIX / "printed_rx.png"), "m", "normal")
+
+
+def test_service_down_falls_back_to_offline_reading(tmp_path, monkeypatch):
+    """Gemini unreachable: printed text is still read on this server, photo kept for a full read later."""
+    monkeypatch.setattr(cli, "CACHE", tmp_path / "cache")
+    monkeypatch.setattr(cli, "QUEUE", tmp_path / "queue")
+    monkeypatch.setattr(cli, "quick_check", lambda img: None)
+
+    def down(*a, **k):
+        raise OfflineError("service down")
+
+    monkeypatch.setattr(cli, "read_image", down)
+    result = cli.run([str(FIX / "printed_rx.png")], tmp_path / "out")
+    img = result["images"][0]
+    names = [i["name_as_read"] for i in img["items"]]
+    assert img["offline"] and "Metformin" in names
+    assert all(i["timing_text"] is None for i in img["items"])          # timing is never read offline
+    assert (tmp_path / "queue" / "printed_rx.png").exists()              # still queued for a full read
+    sched = build_schedule(result)
+    assert sched["offline"] and "Basic reading" in card_text(sched, "en")
