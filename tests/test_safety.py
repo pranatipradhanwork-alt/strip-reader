@@ -104,3 +104,22 @@ def test_timing_on_printed_prescription_not_flagged():
 def test_suffix_means_confirm():
     i = item(name_as_printed="Montair Plus", strength="10 mg")
     assert i.status == "confirm"
+
+
+def test_new_brand_matched_by_printed_generic():
+    i = check_item({"name_as_printed": "Cefizot 200 DT", "generic_as_printed": "Cefixime Tablets IP",
+                    "strength": "200 mg", "source": "printed_strip", "confidence": 0.97}, MEDS)
+    assert i.status == "ok" and i.generic == "Cefixime" and i.matched_via == "generic"
+    assert i.matched_name == "Cefizot 200 DT (Cefixime)"
+
+
+def test_combination_generic_is_not_forced_into_one_drug():
+    i = check_item({"name_as_printed": "KazHeyl-D", "strength": "50 mg", "source": "printed_strip", "confidence": 0.95,
+                    "generic_as_printed": "Trypsin, Bromelain, Rutoside Trihydrate & Diclofenac Sodium Tablets"}, MEDS)
+    assert i.status == "confirm" and i.generic is None
+
+
+def test_handwritten_never_uses_generic_fallback():
+    i = check_item({"name_as_printed": "Cefzt", "generic_as_printed": "Cefixime", "strength": "200 mg",
+                    "source": "handwritten", "confidence": 0.95}, MEDS)
+    assert i.status == "confirm" and i.matched_via == "name"

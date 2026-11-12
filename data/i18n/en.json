@@ -91,5 +91,6 @@
   "step_scan": "Scanning the label",
   "step_read": "Reading medicine names",
   "step_check": "Checking against the medicine list",
-  "step_card": "Preparing your card"
+  "step_card": "Preparing your card",
+  "nothing_read": "We couldn't read any medicine names in {n} photo(s). Please show it to your pharmacist or doctor."
 }

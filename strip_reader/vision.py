@@ -12,12 +12,20 @@ from PIL import Image, ImageOps
 
 MAX_SIDE = 1600  # shrink big phone photos: faster upload, same reading quality
 
+PROMPT_VERSION = "v2"  # bump when the prompt changes, so old cached replies are not reused
+
 PROMPT = """You are reading a photo that should show a medicine strip, medicine box, or prescription.
-First decide: is_medicine_photo = true only if the photo clearly shows a medicine strip, medicine
-box/bottle label, or a doctor's prescription. Anything else (a screenshot, a document, a person,
-food, a random object, a blank page) -> is_medicine_photo = false, image_type = "other", items = [].
-If it is a medicine photo, list every medicine you can see. For each one return:
+First decide is_medicine_photo. It is TRUE for a medicine strip, a medicine box/bottle label, or ANY
+doctor's prescription, including hospital/OPD prescription forms with a printed header and handwritten
+notes, and paper slips with handwritten medicine names. It is FALSE only when the photo clearly shows
+something else (a screen or screenshot, a non-medical document, a person, food, a random object, a
+blank page) -> then image_type = "other" and items = []. If unsure, choose TRUE.
+If it is a medicine photo, list every medicine you can see, including handwritten lines on a
+prescription (read them as best you can and give them low confidence). Ignore packs that are only
+partly visible at the edge of a prescription photo. For each medicine return:
 - name_as_printed: the medicine name exactly as written (brand or generic). Do not correct spelling.
+- generic_as_printed: the generic / composition name printed for that medicine on the pack
+  (e.g. "Cefixime Tablets IP", "Paracetamol"), exactly as written. null if none is printed.
 - strength: the strength exactly as written next to that name (e.g. "500 mg"). null if not visible.
 - timing_text: dosing/timing words exactly as written for that medicine (e.g. "1-0-1", "after food",
   "twice daily"). null if nothing is written. Never guess or add a usual dose.
@@ -41,6 +49,7 @@ SCHEMA = {
                 "type": "object",
                 "properties": {
                     "name_as_printed": {"type": "string", "nullable": True},
+                    "generic_as_printed": {"type": "string", "nullable": True},
                     "strength": {"type": "string", "nullable": True},
                     "timing_text": {"type": "string", "nullable": True},
                     "source": {"type": "string", "enum": [
@@ -119,8 +128,9 @@ def quick_check(img: Image.Image) -> bool | None:
             model=CHECK_MODEL,
             contents=[types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg"),
                       "Does this photo show a medicine strip, a medicine box/bottle label, or a doctor's "
-                      "prescription? Answer false for screenshots, documents, people, food, objects or "
-                      "blank pages."],
+                      "prescription (including hospital/OPD prescription forms and handwritten medicine "
+                      "slips)? Answer false only if it clearly shows something else: a screen or screenshot, "
+                      "a non-medical document, a person, food, an object or a blank page. If unsure, answer true."],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json", temperature=0,
                 response_schema={"type": "object", "properties": {"is_medicine_photo": {"type": "boolean"}},

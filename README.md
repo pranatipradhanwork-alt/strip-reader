@@ -140,6 +140,18 @@ A pilot run on **12 real photos** (6 handwritten prescriptions, 6 printed strips
 
 Upload-size check (3 photos at each size): printed strips read the same at all sizes; handwriting degraded at smaller sizes; no size produced a wrong OK. The photo is therefore shrunk only when the network forces it.
 
+**Unseen photos** (6 photos the app was never tuned on: 2 handwritten prescriptions and 4 strips/boxes of brands not in the medicine list):
+
+| Photo | Result |
+|---|---|
+| Handwritten prescription | 4 handwritten lines read, all marked CONFIRM (low confidence) |
+| Hospital OPD prescription (very unclear handwriting) | No names readable; the card says so and sends the person to a pharmacist |
+| Strip of a new brand with the generic printed (cefixime) | **OK**, matched through the printed generic name |
+| 2 supplement boxes, 1 combination-drug strip | CONFIRM (not in the medicine list) |
+| Wrong item marked OK | **0** |
+
+These photos exposed two bugs that are now fixed: the guardrail rejected a hospital prescription form as "not a medicine photo" (it now accepts any prescription and only rejects photos that are clearly something else), and new brands were never recognised (the app now also matches the generic name printed on the pack, a much smaller and more stable list than brand names).
+
 The pilot is small and the medicine list includes brands seen in it. A larger, unseen, multi-region test set with a labelled evaluation (per-field accuracy, safe-failure rate, unsafe-pass rate) is in progress.
 
 ## Design decisions

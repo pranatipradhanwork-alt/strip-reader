@@ -53,6 +53,9 @@ def build_schedule(result: dict, confirmations: dict | None = None, uses_fn=None
     sched["as_needed"], sched["ask"] = [], []
     sched["queued"] = [Path(img["image"]).name for img in result["images"] if img.get("queued")]
     sched["not_medicine"] = [Path(img["image"]).name for img in result["images"] if img.get("not_medicine")]
+    # A medicine photo where nothing could be read must never look like "no medicines".
+    sched["unread"] = [Path(img["image"]).name for img in result["images"]
+                       if not img.get("queued") and not img.get("not_medicine") and not img.get("items")]
     for img in result["images"]:
         for n, i in enumerate(img["items"], 1):
             iid = item_id(img.get("image", "photo"), n)
@@ -156,6 +159,8 @@ def card_text(sched: dict, lang: str = "en") -> str:
         lines.append(f"\n!! {L['queued'].format(n=len(sched['queued']))}")
     if sched.get("not_medicine"):
         lines.append(f"\n!! {L['not_medicine'].format(n=len(sched['not_medicine']))}")
+    if sched.get("unread"):
+        lines.append(f"\n!! {L['nothing_read'].format(n=len(sched['unread']))}")
     for key in (*SLOT_ORDER, "as_needed"):
         if key == "evening" and not sched[key]:
             continue
@@ -303,6 +308,9 @@ def card_html(sched: dict, lang: str = "en", crops: bool = True, audio: str | No
     if sched.get("not_medicine"):
         parts.append(f"<div class='notice' role='alert'>{icon('block')}"
                      f"<div>{esc(L['not_medicine'].format(n=len(sched['not_medicine'])))}</div></div>")
+    if sched.get("unread"):
+        parts.append(f"<div class='notice' role='alert'>{icon('alert')}"
+                     f"<div>{esc(L['nothing_read'].format(n=len(sched['unread'])))}</div></div>")
     if any(e.get("confirmed_by") for k in (*SLOT_ORDER, "as_needed") for e in sched[k]):
         parts.append(f"<p class='legend'>{icon('check', 18)}{esc(L['confirmed_legend'])}</p>")
     slots = []
