@@ -491,3 +491,6 @@ html[data-theme="dark"] .splash-mark { background: var(--glass); border: 1px sol
   .splash-mark, .splash-name, .splash-caption { animation: none; opacity: 1; transform: none; }
 }
 @media print { .splash { display: none !important; } }
+/* Light theme opening screen: soft translucent pink instead of plain white. */
+html:not([data-theme="dark"]) .splash {
+  background: radial-gradient(120% 80% at 50% 38%, rgba(232, 51, 90, .20) 0%, rgba(255, 107, 138, .10) 45%, rgba(232, 51, 90, .04) 100%), #fff6f8; }
