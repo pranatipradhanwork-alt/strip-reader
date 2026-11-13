@@ -93,4 +93,4 @@ def test_sign_in_never_redirects_off_site(tmp_path):
     reg.set_status("OR-12345", "approved", by="Admin")
     c = create_app(tmp_path / "runs", uses_fn=None, speak_fn=None, registry=reg).test_client()
     r = c.post("/pharmacist/login", data={"reg_no": "OR-12345", "password": "s3cret-pass", "next": "https://evil.example"})
-    assert r.headers["Location"] == "/"
+    assert r.headers["Location"] == "/pharmacist/inbox"

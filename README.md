@@ -115,6 +115,15 @@ Anyone can *say* they are a pharmacist, so the web app never trusts a typed name
 
 Registration numbers have no single national format (unlike PAN): each State Pharmacy Council uses its own, so the app checks only the basic shape and relies on the certificate match.
 
+### Ask a pharmacist (chat)
+
+The card has an **Ask a pharmacist** button. The patient types a question or taps a ready one (*"Is this right?"*, *"When should I take these?"*, *"Can I take these together?"*). The reading is attached automatically: the pharmacist sees each unsure item with its label picture and the medicines already on the card, so the patient doesn't have to explain.
+
+- Verified pharmacists see a **Questions** inbox (waiting questions first, oldest first), reply in plain words, and can open *Check & confirm* to move a medicine onto the card.
+- Each reply shows the pharmacist's name and registration number. The patient's page checks for new messages every 8 seconds, so it works like a chat with no patient account; the card and History show *"A pharmacist replied"*.
+- Only the browser that made the reading, or a signed-in pharmacist, can see or write in that chat. Messages are shown as plain text, kept to 1,000 characters, and capped per chat.
+- The app never promises a reply time. Every chat keeps the "Call 108" link and says a pharmacist's reply does not replace the doctor's advice.
+
 `python -m strip_reader.web <run folder>` is a separate local tool for reviewing one CLI run on your own machine; it asks for a typed name and is not meant to be put online.
 
 ## Urgent help
@@ -236,6 +245,7 @@ strip_reader/
   offline.py     offline fallback: OCR on printed text + medicine list
   confirm.py     pharmacist confirmation rules
   pharmacists.py verified pharmacist accounts (apply, AI certificate check, approve, sign in)
+  chat.py        ask a pharmacist: message thread per reading, pharmacist inbox
   voice.py       card -> spoken script -> MP3
   app.py         web app: camera/upload -> card, read aloud, pharmacist check, history (Flask)
   icons.py       inline line icons
@@ -247,7 +257,7 @@ data/
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py
-tests/           118 tests, no API key needed
+tests/           120 tests, no API key needed
 ```
 
 ## Testing
