@@ -469,3 +469,39 @@ html[data-theme="dark"] .welcome-mark, html[data-theme="dark"] .brand-mark { bac
   border: 1px solid var(--glass-line); }
 html[data-theme="dark"] .msg.mine { background: var(--glass); color: var(--glass-ink); border: 1px solid var(--glass-line); }
 html[data-theme="dark"] .pop-tile { background: var(--glass); border: 1px solid var(--glass-line); }
+
+/* Opening screen: logo -> name -> caption, then fades into the app (about 2.4 s). */
+.splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--bg);
+  animation: splash-out .5s ease 2.1s forwards; }
+.splash-inner { display: grid; justify-items: center; gap: 14px; text-align: center; padding: 24px; }
+.splash-mark { display: grid; place-items: center; width: 88px; height: 88px; border-radius: 24px; color: #fff;
+  background: linear-gradient(135deg, #e8335a, #ff6b8a); box-shadow: 0 18px 40px rgba(232, 51, 90, .28);
+  opacity: 0; transform: scale(.6); animation: splash-pop .55s cubic-bezier(.2, .9, .3, 1.2) .1s forwards; }
+.splash-name { font-size: 40px; font-weight: 800; letter-spacing: -.02em; color: var(--heading);
+  opacity: 0; transform: translateY(10px); animation: splash-up .5s ease .55s forwards; }
+.splash-caption { font-size: 20px; font-weight: 600; color: var(--accent-text); letter-spacing: .01em;
+  opacity: 0; transform: translateY(10px); animation: splash-up .5s ease 1s forwards; }
+html[data-theme="dark"] .splash-mark { background: var(--glass); border: 1px solid var(--glass-line); color: var(--accent-text);
+  box-shadow: 0 0 40px rgba(99, 102, 241, .25); }
+@keyframes splash-pop { to { opacity: 1; transform: scale(1); } }
+@keyframes splash-up { to { opacity: 1; transform: none; } }
+@keyframes splash-out { to { opacity: 0; visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) {
+  .splash { animation-delay: 1.2s; }
+  .splash-mark, .splash-name, .splash-caption { animation: none; opacity: 1; transform: none; }
+}
+@media print { .splash { display: none !important; } }
+/* Light theme opening screen: soft translucent pink instead of plain white. */
+html:not([data-theme="dark"]) .splash {
+  background: radial-gradient(120% 80% at 50% 38%, rgba(232, 51, 90, .20) 0%, rgba(255, 107, 138, .10) 45%, rgba(232, 51, 90, .04) 100%), #fff6f8; }
+/* Light opening screen, more solid: a full soft-rose gradient, white logo tile. */
+html:not([data-theme="dark"]) .splash { background: linear-gradient(165deg, #fbd0db 0%, #f6aebf 55%, #f29ab0 100%); }
+html:not([data-theme="dark"]) .splash-mark { background: #fff; color: #e8335a; box-shadow: 0 18px 40px rgba(160, 20, 55, .25); }
+html:not([data-theme="dark"]) .splash-name { color: #2a0a12; }
+html:not([data-theme="dark"]) .splash-caption { color: #a3123a; }
+/* Light opening screen, final: clean white with a soft pink glow (option 2). */
+html:not([data-theme="dark"]) .splash { background: radial-gradient(90% 55% at 50% 40%, #ffe3ea 0%, #ffffff 70%); }
+html:not([data-theme="dark"]) .splash-mark { background: linear-gradient(135deg, #e8335a, #ff6b8a); color: #fff;
+  box-shadow: 0 18px 40px rgba(232, 51, 90, .28); }
+html:not([data-theme="dark"]) .splash-name { color: #1c1c1e; }
+html:not([data-theme="dark"]) .splash-caption { color: #d42a50; }

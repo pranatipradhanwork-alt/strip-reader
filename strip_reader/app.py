@@ -396,7 +396,8 @@ def home_page(lang: str, error: str = "") -> str:
         "__BLOCKED__", json.dumps(L["camera_blocked"])).replace("__MAX__", str(MAX_PHOTOS)).replace(
         "__ALLOW__", json.dumps(L["cam_allow"])).replace("__TIP__", json.dumps(L["cam_hint"]))
     return page(L["app_name"], body.replace("{SCRIPT}", script), lang,
-                topbar(lang, lambda c: f"/?lang={c}", right=history_link(lang, "read")), tabbar(lang, "read"))
+                topbar(lang, lambda c: f"/?lang={c}", right=history_link(lang, "read")), tabbar(lang, "read"),
+                opening=True)
 
 
 PHOTO_EXTS = (".jpg", ".jpeg", ".png", ".webp")
@@ -453,7 +454,7 @@ def welcome_page(lang: str) -> str:
     {choice(f'/start/pharmacist?lang={lang}', 'check_user', L['role_pharmacist'], L['role_pharmacist_sub'], '')}
   </div>
 </section>"""
-    return page(L["app_name"], body, lang, topbar(lang, lambda c: f"/?lang={c}"))
+    return page(L["app_name"], body, lang, topbar(lang, lambda c: f"/?lang={c}"), opening=True)
 
 
 def pharmacist_links(current: str = "") -> str:

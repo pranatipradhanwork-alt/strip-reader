@@ -123,5 +123,6 @@
   "role_pharmacist": "I'm a pharmacist",
   "role_pharmacist_sub": "Answer questions and confirm readings (verified accounts)",
   "for_pharmacists": "For pharmacists",
-  "pharmacist_tab": "Pharmacist"
+  "pharmacist_tab": "Pharmacist",
+  "splash_caption": "Every medicine, read right."
 }
