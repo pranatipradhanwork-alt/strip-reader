@@ -418,3 +418,9 @@ a.reply-notice { text-decoration: none; color: inherit; border: 1px solid var(--
 .choice-text b { font-size: 20px; }
 .choice-text span { font-size: 15px; opacity: .8; }
 
+
+.back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 14px; font-size: 15px; font-weight: 600;
+  color: var(--accent-text); text-decoration: none; padding: 6px 10px 6px 4px; border-radius: 10px; }
+.back:hover { background: var(--accent-soft); }
+.auth form { display: grid; gap: 18px; }
+.auth form .btn { margin-top: 8px; }
