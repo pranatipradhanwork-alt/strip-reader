@@ -43,6 +43,12 @@ CERT_EXTS = (".pdf", ".jpg", ".jpeg", ".png", ".webp", ".heic")
 MAX_CERT_BYTES = 10 * 1024 * 1024
 
 
+def password_ok(pw: str) -> bool:
+    """Same rules as the checklist on the apply page: 8+ characters, a letter and a number."""
+    pw = pw or ""
+    return len(pw) >= MIN_PASSWORD and bool(re.search(r"[A-Za-z]", pw)) and bool(re.search(r"\d", pw))
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -85,8 +91,8 @@ class Registry:
             errors.append("Write your registration number as on the certificate.")
         if len(council) < 3:
             errors.append("Write the Pharmacy Council that registered you.")
-        if len(password or "") < MIN_PASSWORD:
-            errors.append(f"Choose a password of at least {MIN_PASSWORD} characters.")
+        if not password_ok(password):
+            errors.append(f"Choose a password of at least {MIN_PASSWORD} characters with at least one letter and one number.")
         if ext not in CERT_EXTS or not cert_bytes:
             errors.append("Upload your Registration Certificate (photo or PDF).")
         elif len(cert_bytes) > MAX_CERT_BYTES:

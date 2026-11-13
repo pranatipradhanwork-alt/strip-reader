@@ -424,3 +424,26 @@ a.reply-notice { text-decoration: none; color: inherit; border: 1px solid var(--
 .back:hover { background: var(--accent-soft); }
 .auth form { display: grid; gap: 18px; }
 .auth form .btn { margin-top: 8px; }
+/* The highlight follows the pointer (or keyboard focus): whichever choice you are on turns accent. */
+.choices-big:hover .choice.primary:not(:hover),
+.choices-big:focus-within .choice.primary:not(:focus-visible):not(:hover) {
+  background: var(--surface); border-color: var(--line); color: var(--ink); }
+.choices-big:hover .choice.primary:not(:hover) .choice-icon,
+.choices-big:focus-within .choice.primary:not(:focus-visible):not(:hover) .choice-icon {
+  background: var(--accent-soft); color: var(--accent-text); }
+.choice:hover, .choice:focus-visible { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); outline: none; }
+.choice:hover .choice-icon, .choice:focus-visible .choice-icon { background: rgba(255, 255, 255, .2); color: inherit; }
+.choice { transition: transform .12s, background .15s, color .15s, border-color .15s; }
+/* Take photo / Choose photo: the filled colour follows the pointer, like the welcome choices. */
+.upload:hover #camera:not(:hover) { background: var(--surface); color: var(--accent-text); border: 1px solid var(--line-2); box-shadow: none; }
+.upload label[for="photos"]:hover { background: linear-gradient(90deg, var(--accent), var(--accent-2)); color: var(--accent-ink);
+  border-color: transparent; box-shadow: var(--btn-glow); }
+.upload #camera, .upload label[for="photos"] { transition: background .15s, color .15s, border-color .15s; }
+
+/* Password checklist on the pharmacist apply page */
+.pw-rules { list-style: none; padding: 0; margin: -8px 0 0; display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
+.pw-rules li::before { content: "○"; display: inline-block; width: 20px; }
+.pw-rules li.ok { color: var(--ok); }
+.pw-rules li.ok::before { content: "✓"; font-weight: 700; }
+.pw-rules li.bad { color: #c0262d; }
+.pw-rules li.bad::before { content: "✕"; }

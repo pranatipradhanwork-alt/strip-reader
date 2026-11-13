@@ -210,6 +210,7 @@ def test_first_visit_asks_who_and_remembers(tmp_path):
     assert r.headers["Location"] == "/?lang=en"
     assert "Read my medicines" in c.get("/?lang=en").data.decode()          # remembered: straight to the reader
     assert "For pharmacists" in c.get("/?lang=en").data.decode()            # can always switch
+    assert "class='tabbar'" in c.get("/?lang=en").data.decode() and "/start/pharmacist" in c.get("/history?lang=en").data.decode()
 
     ph = app.test_client()
     assert "/pharmacist/login" in ph.get("/start/pharmacist").headers["Location"]
