@@ -53,6 +53,8 @@ def validate(item: dict, form: dict) -> tuple[dict | None, list[str]]:
     if not by:
         return None, ["write your name so we know who confirmed it"]
     rec = {"action": action, "by": by, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    if form.get("reg_no"):
+        rec["reg_no"] = form["reg_no"]      # set by the app from the logged-in, verified pharmacist
     if action == "not_medicine":
         return rec, []
 

@@ -95,12 +95,27 @@ Only what is written is used:
 
 ## Pharmacist review
 
-`python -m strip_reader.web <run folder>` opens a review page listing every item not yet on the card, with its label crop and the reasons. The pharmacist can **confirm** (correcting the name, strength or timing), mark it **not a medicine**, or **leave it for the doctor**.
+The review page lists every item not yet on the card, with its label crop and the reasons. The pharmacist can **confirm** (correcting the name, strength or timing), mark it **not a medicine**, or **leave it for the doctor**.
 
 - What the pharmacist enters passes the same rules: the strength needs a unit, and the timing must say *when*.
-- The pharmacist's name is required.
 - If any entry is invalid, nothing is saved.
-- Confirmed items appear on the card with a ✓. Each confirmation records who, when and which fields changed, and can be undone.
+- Confirmed items appear on the card as *"Checked by pharmacist <name> (Reg. <number>)"*. Each confirmation records who, when and which fields changed, and can be undone.
+
+### Only verified pharmacists can confirm
+
+Anyone can *say* they are a pharmacist, so the web app never trusts a typed name.
+
+| Step | What happens |
+|---|---|
+| Apply | `/pharmacist/apply`: name, State Pharmacy Council registration number, council, a photo/PDF of the Registration Certificate, and a password. The account is **pending**. |
+| AI first check | Gemini reads the certificate (name, registration number, council, valid-until date) and compares it with what was typed. A mismatch or an expired certificate is flagged, and **approval is blocked**. |
+| Person approves | An admin checks the number against the council's register (India has no public API for it) and approves: `python -m strip_reader.pharmacists approve <reg no> --by "<name>"`. AI can read a certificate but can't tell a real one from an edited copy, so it never approves anyone by itself. |
+| Sign in | Only approved accounts can sign in; the check page and every save require it. 5 wrong passwords in 10 minutes lock sign-in for a while. Passwords are stored only as salted hashes; accounts and certificates stay in `instance/` (not in git). |
+| Disable | `python -m strip_reader.pharmacists disable <reg no>` stops an account immediately. |
+
+Registration numbers have no single national format (unlike PAN): each State Pharmacy Council uses its own, so the app checks only the basic shape and relies on the certificate match.
+
+`python -m strip_reader.web <run folder>` is a separate local tool for reviewing one CLI run on your own machine; it asks for a typed name and is not meant to be put online.
 
 ## Urgent help
 
@@ -220,6 +235,7 @@ strip_reader/
   leaflets.py    leaflet RAG and dose guard
   offline.py     offline fallback: OCR on printed text + medicine list
   confirm.py     pharmacist confirmation rules
+  pharmacists.py verified pharmacist accounts (apply, AI certificate check, approve, sign in)
   voice.py       card -> spoken script -> MP3
   app.py         web app: camera/upload -> card, read aloud, pharmacist check, history (Flask)
   icons.py       inline line icons
@@ -231,7 +247,7 @@ data/
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py
-tests/           103 tests, no API key needed
+tests/           118 tests, no API key needed
 ```
 
 ## Testing

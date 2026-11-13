@@ -5,6 +5,17 @@ import pytest
 from PIL import Image
 
 from strip_reader.app import FIX, create_app
+from strip_reader.pharmacists import Registry
+
+CERT_OK = {"is_pharmacist_registration_certificate": True, "name": "Asha Sahoo", "registration_number": "OR-12345",
+           "council": "Odisha State Pharmacy Council", "valid_until": "2099-12-31"}
+
+
+def approved_registry(folder):
+    reg = Registry(folder, reader=lambda path: CERT_OK)
+    assert reg.apply("Asha Sahoo", "or-12345", "Odisha State Pharmacy Council", "s3cret-pass", "cert.pdf", b"%PDF-") == []
+    reg.set_status("OR-12345", "approved", by="Admin")
+    return reg
 
 
 def fake_reader(images, run_dir, mock=None):
@@ -17,7 +28,8 @@ def fake_reader(images, run_dir, mock=None):
 def client(tmp_path, monkeypatch):
     from strip_reader import cli
     monkeypatch.setattr(cli, "CACHE", tmp_path / "cache")
-    app = create_app(tmp_path / "runs", reader=fake_reader, uses_fn=None, speak_fn=None)
+    app = create_app(tmp_path / "runs", reader=fake_reader, uses_fn=None, speak_fn=None,
+                     registry=approved_registry(tmp_path / "instance"))
     return app.test_client()
 
 
@@ -32,6 +44,12 @@ def test_home_in_each_language(client, lang, word):
     r = client.get(f"/?lang={lang}")
     assert r.status_code == 200 and word in r.data.decode()
     assert 'capture="environment"' in r.data.decode() and 'getUserMedia' in r.data.decode()
+
+
+def test_home_script_has_no_unfilled_placeholders(client):
+    page = client.get("/?lang=en").data.decode()
+    assert "__CHOSEN__" not in page and "__BLOCKED__" not in page and "__ALLOW__" not in page
+    assert "Starting the camera" in page
 
 
 def test_sample_goes_to_card(client):
@@ -58,13 +76,22 @@ def test_no_photo_or_bad_file_is_refused(client):
 def test_review_and_card_links_work(client):
     loc = client.post("/sample", data={"lang": "en"}).headers["Location"]
     base = loc.split("/card")[0]
+    # Not signed in: the check page and saving both send you to the sign-in page.
+    assert "/pharmacist/login" in client.get(f"{base}/review").headers["Location"]
+    good = {"sample_prescription.png-item6|action": "confirm", "sample_prescription.png-item6|name": "Glimepiride",
+            "sample_prescription.png-item6|strength": "1 mg", "sample_prescription.png-item6|timing_text": "1-0-0",
+            "by": "Anyone at all"}
+    assert "/pharmacist/login" in client.post(f"{base}/review", data=good).headers["Location"]
+    assert "Glimepiride" not in client.get(f"{base}/card?lang=en").data.decode().split("Ask your pharmacist")[0]
+
+    client.post("/pharmacist/login", data={"reg_no": "OR-12345", "password": "s3cret-pass"})
     review = client.get(f"{base}/review").data.decode()
-    assert "Pharmacist check" in review and "Glimpride" in review   # the unsure handwritten item
-    bad = client.post(f"{base}/review", data={"by": "P", f"sample_prescription.png-item6|action": "confirm",
-                                              f"sample_prescription.png-item6|name": "Glimepiride",
-                                              f"sample_prescription.png-item6|strength": "1",
-                                              f"sample_prescription.png-item6|timing_text": "1-0-0"})
+    assert "Pharmacist check" in review and "Glimpride" in review and "Signed in as" in review
+    bad = client.post(f"{base}/review", data={**good, "sample_prescription.png-item6|strength": "1"})
     assert bad.status_code == 400
+    assert client.post(f"{base}/review", data=good).status_code == 302
+    card = client.get(f"{base}/card?lang=en").data.decode()
+    assert "Checked by pharmacist Asha Sahoo (Reg. OR-12345)" in card and "Anyone at all" not in card
 
 
 def test_unknown_run_is_404(client):
@@ -145,3 +172,28 @@ def test_history_lists_only_this_browsers_readings_and_can_delete(tmp_path, monk
     assert other.post(f"/r/{rid}/delete").status_code == 404                     # and can't delete it
     me.post(f"/r/{rid}/delete?lang=en")
     assert me.get(loc).status_code == 404 and "No readings yet" in me.get("/history?lang=en").data.decode()
+
+
+def test_save_upload_turns_pdf_pages_and_heic_into_photos(tmp_path):
+    from werkzeug.datastructures import FileStorage
+    from pillow_heif import register_heif_opener
+    from strip_reader.app import save_upload
+    register_heif_opener()
+    pdf = io.BytesIO()
+    Image.new("RGB", (300, 400), "white").save(pdf, format="PDF", save_all=True,
+                                                append_images=[Image.new("RGB", (300, 400), "white")])
+    paths = save_upload(FileStorage(io.BytesIO(pdf.getvalue()), "rx.pdf"), tmp_path, 1, 6)
+    assert len(paths) == 2 and all(Image.open(p).format == "PNG" for p in paths)
+    assert len(save_upload(FileStorage(io.BytesIO(pdf.getvalue()), "rx.pdf"), tmp_path, 3, 1)) == 1   # page limit
+    heic = io.BytesIO()
+    Image.new("RGB", (40, 40), "white").save(heic, format="HEIF")
+    [p] = save_upload(FileStorage(io.BytesIO(heic.getvalue()), "IMG_1.HEIC"), tmp_path, 4, 6)
+    assert Image.open(p).format == "JPEG"
+
+
+def test_upload_pdf_goes_to_card(client):
+    pdf = io.BytesIO()
+    Image.new("RGB", (300, 400), "white").save(pdf, format="PDF")
+    r = client.post("/read", data={"lang": "en", "photos": (io.BytesIO(pdf.getvalue()), "prescription.pdf")},
+                    content_type="multipart/form-data")
+    assert r.status_code == 302

@@ -52,13 +52,20 @@ class Run:
         """Items not on the card yet: the ones the pharmacist should see."""
         return {e["id"] for e in self.schedule()["ask"]}
 
-    def save_review(self, form) -> tuple[dict, dict]:
-        """Validate every pharmacist entry; save only if all are valid. Returns (errors, forms)."""
+    def save_review(self, form, pharmacist: dict | None = None) -> tuple[dict, dict]:
+        """Validate every pharmacist entry; save only if all are valid. Returns (errors, forms).
+
+        `pharmacist` is the logged-in, verified account (the web app); its name and registration
+        number are used, never a name typed into the form.
+        """
         confs = self.confirmations()
         errors, forms = {}, {}
         for iid, item in self.items():
             f = {k: form.get(f"{iid}|{k}", "") for k in ("action", "name", "strength", "timing_text")}
-            f["by"] = form.get("by", "")
+            if pharmacist:
+                f["by"], f["reg_no"] = pharmacist["name"], pharmacist["reg_no"]
+            else:
+                f["by"] = form.get("by", "")
             forms[iid] = f
             if f["action"] in ("", "leave"):
                 continue
@@ -150,7 +157,7 @@ def history_link(lang: str, current: str = "") -> str:
             f"{link('history', f'/history?lang={lang}', L['history'])}</nav>")
 
 
-def review_page(run: Run, base: str, lang: str = "en", errors=None, form=None) -> str:
+def review_page(run: Run, base: str, lang: str = "en", errors=None, form=None, pharmacist=None) -> str:
     esc = html.escape
     errors, form = errors or {}, form or {}
     confs, ask = run.confirmations(), run.ask_ids()
@@ -165,7 +172,8 @@ def review_page(run: Run, base: str, lang: str = "en", errors=None, form=None) -
         status = ""
         if c:
             label = "confirmed" if c["action"] == "confirm" else "marked not a medicine"
-            status = (f"<div class='done'>{icon('check', 18)}{label} by {esc(c['by'])}<button formaction='{esc(base)}/undo/{esc(iid)}' "
+            who = c['by'] + (f" (Reg. {c['reg_no']})" if c.get('reg_no') else "")
+            status = (f"<div class='done'>{icon('check', 18)}{label} by {esc(who)}<button formaction='{esc(base)}/undo/{esc(iid)}' "
                       f"formmethod='post' formnovalidate>undo</button></div>")
         err = "".join(f"<div class='err'>{esc(e)}</div>" for e in errors.get(iid, []))
         why = "; ".join(i.get("reasons") or [])
@@ -189,11 +197,18 @@ def review_page(run: Run, base: str, lang: str = "en", errors=None, form=None) -
 </section>""")
     body_rows = "".join(rows) or "<p class='note'>Nothing to check. Every item was read clearly.</p>"
     by = esc(next((v.get("by") for v in form.values() if v.get("by")), ""))
+    if pharmacist:   # verified account: no name box, show who is signed in
+        who_field = (f"<div class='signed-in'>{icon('check_user', 18)}<span>Signed in as <b>{esc(pharmacist['name'])}</b>"
+                     f" · Reg. {esc(pharmacist['reg_no'])} · {esc(pharmacist['council'])}</span>"
+                     f"<button class='btn btn-quiet' formaction='/pharmacist/logout' formmethod='post' formnovalidate>"
+                     f"Sign out</button></div>")
+    else:            # local single-run review tool (python -m strip_reader.web)
+        who_field = f'<div class="field"><label>Your name <input name="by" value="{by}" required></label></div>'
     body = f"""<form method="post" action="{esc(base)}/review">
 <div class="review-top">
   <h1>Pharmacist check</h1>
   <p>Look at each label picture. Fix anything wrong, then choose "confirm". Only confirmed items go on the card.</p>
-  <div class="field"><label>Your name <input name="by" value="{by}" required></label></div>
+  {who_field}
   <div class="btn-row" style="margin-top:16px"><button class="btn btn-primary" type="submit">Save and show card</button>
   <a class="btn btn-outline" href="{esc(base)}/card?lang={lang}">See card</a></div>
 </div>

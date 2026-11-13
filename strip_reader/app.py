@@ -19,13 +19,14 @@ import time
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, Response, abort, redirect, request
+from flask import Flask, Response, abort, redirect, request, session
 from PIL import Image
 
 from .card import LANGS, labels
 from .leaflets import what_its_for
 from .voice import speak
 from .icons import icon
+from .pharmacists import Registry
 from .web import Run, card_page, history_link, page, review_page, tabbar, topbar
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,11 +46,82 @@ def default_reader(images: list[str], run_dir: Path, mock: str | None = None) ->
     return run(images, run_dir, mock=mock, model=model, budget_s=60)
 
 
+LOGIN_TRIES, LOGIN_WINDOW_S = 5, 600   # 5 wrong passwords in 10 minutes -> wait
+
+
+def secret_key(folder: Path) -> str:
+    """Signs the pharmacist's login cookie. From SECRET_KEY, else made once and kept in instance/."""
+    import os
+    if os.getenv("SECRET_KEY"):
+        return os.environ["SECRET_KEY"]
+    f = folder / "secret_key"
+    if not f.exists():
+        folder.mkdir(parents=True, exist_ok=True)
+        f.write_text(secrets.token_hex(32))
+        f.chmod(0o600)
+    return f.read_text().strip()
+
+
 def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reader,
-               uses_fn=what_its_for, speak_fn=speak) -> Flask:
+               uses_fn=what_its_for, speak_fn=speak, registry: Registry | None = None) -> Flask:
     base_dir = Path(base_dir)
+    registry = registry or Registry()
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = MAX_PHOTOS * 15 * 1024 * 1024
+    app.config.update(SECRET_KEY=secret_key(registry.dir), SESSION_COOKIE_HTTPONLY=True,
+                      SESSION_COOKIE_SAMESITE="Lax", PERMANENT_SESSION_LIFETIME=12 * 3600)
+    failed: dict[str, list[float]] = {}
+
+    def pharmacist() -> dict | None:
+        """The logged-in pharmacist, re-read every time so a disabled account stops at once."""
+        reg = session.get("pharmacist")
+        return registry.get(reg) if reg else None
+
+    def need_login(rid: str):
+        return redirect(f"/pharmacist/login?next=/r/{rid}/review%3Flang={lang_arg()}")
+
+    @app.get("/pharmacist/login")
+    def login_form():
+        return login_page(request.args.get("next", ""))
+
+    @app.post("/pharmacist/login")
+    def login():
+        ip, now = request.remote_addr or "?", time.time()
+        tries = [t for t in failed.get(ip, []) if now - t < LOGIN_WINDOW_S]
+        nxt = request.form.get("next", "")
+        if len(tries) >= LOGIN_TRIES:
+            return login_page(nxt, "Too many wrong tries. Please wait 10 minutes."), 429
+        rec, problem = registry.check(request.form.get("reg_no", ""), request.form.get("password", ""))
+        if not rec:
+            if problem == "wrong":
+                failed[ip] = tries + [now]
+            msg = ("Your application is still being verified. You can sign in once it is approved."
+                   if problem == "pending" else "Registration number or password is wrong.")
+            return login_page(nxt, msg), 401
+        failed.pop(ip, None)
+        session.clear()
+        session.permanent = True
+        session["pharmacist"] = rec["reg_no"]
+        return redirect(nxt if re.match(r"^/r/[0-9]{8}-[0-9a-f]{8}/review(\?lang=[a-z]{2})?$", nxt) else "/")
+
+    @app.post("/pharmacist/logout")
+    def logout():
+        session.clear()
+        return redirect("/")
+
+    @app.get("/pharmacist/apply")
+    def apply_form():
+        return apply_page()
+
+    @app.post("/pharmacist/apply")
+    def apply():
+        f = request.files.get("certificate")
+        errors = registry.apply(request.form.get("name", ""), request.form.get("reg_no", ""),
+                                request.form.get("council", ""), request.form.get("password", ""),
+                                f.filename if f else "", f.read() if f else b"")
+        if errors:
+            return apply_page(request.form, errors), 400
+        return apply_page(done=True)
 
     def lang_arg() -> str:
         lang = request.values.get("lang", "or")
@@ -113,16 +185,13 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
             return home_page(lang, labels(lang)["no_photo"]), 400
         rid, d = new_run()
         saved = []
-        for n, f in enumerate(files, 1):
-            ext = Path(f.filename).suffix.lower() or ".jpg"
-            path = d / "photos" / f"photo{n}{ext if ext in ('.jpg', '.jpeg', '.png', '.webp') else '.jpg'}"
-            f.save(path)
+        for f in files:
             try:
-                with Image.open(path) as im:
-                    im.verify()
+                saved += save_upload(f, d / "photos", len(saved) + 1, MAX_PHOTOS - len(saved))
             except Exception:
                 return home_page(lang, labels(lang)["bad_photo"]), 400
-            saved.append(str(path))
+            if len(saved) >= MAX_PHOTOS:
+                break
         return finish(rid, d, saved)
 
     @app.post("/sample")
@@ -146,19 +215,27 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
 
     @app.get("/r/<rid>/review")
     def review(rid):
-        return review_page(get_run(rid), f"/r/{rid}", lang_arg())
+        run, ph = get_run(rid), pharmacist()
+        if not ph:
+            return need_login(rid)
+        return review_page(run, f"/r/{rid}", lang_arg(), pharmacist=ph)
 
     @app.post("/r/<rid>/review")
     def save_review(rid):
-        run = get_run(rid)
-        errors, forms = run.save_review(request.form)
+        run, ph = get_run(rid), pharmacist()
+        if not ph:            # only a verified pharmacist can put an unsure reading on the card
+            return need_login(rid)
+        errors, forms = run.save_review(request.form, pharmacist=ph)
         if errors:
-            return review_page(run, f"/r/{rid}", lang_arg(), errors, forms), 400
+            return review_page(run, f"/r/{rid}", lang_arg(), errors, forms, pharmacist=ph), 400
         return redirect(f"/r/{rid}/card?lang={lang_arg()}")
 
     @app.post("/r/<rid>/undo/<path:iid>")
     def undo(rid, iid):
-        get_run(rid).undo(iid)
+        run, ph = get_run(rid), pharmacist()
+        if not ph:
+            return need_login(rid)
+        run.undo(iid)
         return redirect(f"/r/{rid}/review")
 
     @app.get("/r/<rid>/audio/<name>")
@@ -191,7 +268,7 @@ def home_page(lang: str, error: str = "") -> str:
     {err}
     <form class="upload stack" method="post" action="/read" enctype="multipart/form-data" id="upload">
       <input type="hidden" name="lang" value="{lang}">
-      <input type="file" id="photos" name="photos" accept="image/*" multiple>
+      <input type="file" id="photos" name="photos" accept="image/*,.heic,.heif,.pdf,application/pdf" multiple>
       <input type="file" id="phonecam" accept="image/*" capture="environment">
       <button type="button" class="btn btn-dark btn-block" id="camera">{icon('camera')}{esc(L['take_photo'])}</button>
       <label for="photos" class="btn btn-outline btn-block">{icon('image')}{esc(L['choose_photo'])}</label>
@@ -215,9 +292,10 @@ def home_page(lang: str, error: str = "") -> str:
 </section>
 <div class="cam" id="cam" hidden>
   <video id="video" playsinline autoplay muted></video>
-  <p class="cam-hint">{esc(L['cam_hint'])}</p>
+  <p class="cam-hint" id="camhint">{esc(L['cam_allow'])}</p>
   <div class="btn-row">
-    <button type="button" class="btn btn-primary" id="shoot">{icon('camera')}{esc(L['capture'])}</button>
+    <label for="photos" class="btn btn-outline" id="campick" hidden>{icon('image')}{esc(L['choose_photo'])}</label>
+    <button type="button" class="btn btn-primary" id="shoot" disabled>{icon('camera')}{esc(L['capture'])}</button>
     <button type="button" class="btn btn-quiet" id="camdone">{esc(L['done'])}</button>
   </div>
 </div>
@@ -225,7 +303,6 @@ def home_page(lang: str, error: str = "") -> str:
   <div class="reading">
     <div class="read-visual" aria-hidden="true">
       <div class="pop-stage"><span class="pop-tile emoji" style="animation-delay:0.0s"><span class="two-pills"><span>💊</span><span>💊</span></span></span><span class="pop-tile emoji" style="animation-delay:0.9s">🔍</span><span class="pop-tile line" style="animation-delay:1.8s">{icon('strip', 42)}</span><span class="pop-tile line" style="animation-delay:2.7s">{icon('rx', 42)}</span><span class="pop-tile emoji" style="animation-delay:3.6s">🩺</span></div>
-      <div class="thumb" id="scanbox" hidden><img id="scanimg" alt=""><span class="shimmer"></span></div>
       <span id="pillanim" hidden></span>
     </div>
     <h2 id="stagetext">{esc(L['step_upload'])}…</h2>
@@ -237,11 +314,96 @@ def home_page(lang: str, error: str = "") -> str:
     <p class="wait-note">{esc(L['reading_wait'])}</p>
   </div>
 </div>
-{SCRIPT}"""
+{{SCRIPT}}"""
     script = SCRIPT.replace("__CHOSEN__", json.dumps(L["photos_chosen"])).replace(
-        "__BLOCKED__", json.dumps(L["camera_blocked"])).replace("__MAX__", str(MAX_PHOTOS))
+        "__BLOCKED__", json.dumps(L["camera_blocked"])).replace("__MAX__", str(MAX_PHOTOS)).replace(
+        "__ALLOW__", json.dumps(L["cam_allow"])).replace("__TIP__", json.dumps(L["cam_hint"]))
     return page(L["app_name"], body.replace("{SCRIPT}", script), lang,
                 topbar(lang, lambda c: f"/?lang={c}", right=history_link(lang, "read")), tabbar(lang, "read"))
+
+
+PHOTO_EXTS = (".jpg", ".jpeg", ".png", ".webp")
+MAX_PDF_PAGES = 3   # a prescription is 1-2 pages; a long PDF is almost surely something else
+
+
+def save_upload(f, folder: Path, n: int, room: int) -> list[str]:
+    """Save one uploaded file as photo(s) the reader can use.
+
+    Photos (JPG, PNG, WEBP) are kept as they are. iPhone photos (HEIC) become JPG.
+    A PDF (prescriptions often arrive as PDF) becomes one PNG per page, up to `room` pages.
+    Raises if the file is not something we can read.
+    """
+    ext = Path(f.filename or "").suffix.lower()
+    data = f.read()
+    if ext == ".pdf" or data[:5] == b"%PDF-":
+        import pypdfium2 as pdfium
+        pdf = pdfium.PdfDocument(data)
+        out = []
+        for k in range(min(len(pdf), room, MAX_PDF_PAGES)):
+            path = folder / f"photo{n + k}.png"
+            pdf[k].render(scale=200 / 72).to_pil().convert("RGB").save(path)   # 200 dpi: small print stays readable
+            out.append(str(path))
+        if not out:
+            raise ValueError("empty PDF")
+        return out
+    if ext in (".heic", ".heif"):
+        import io
+        from pillow_heif import register_heif_opener
+        register_heif_opener()
+        path = folder / f"photo{n}.jpg"
+        Image.open(io.BytesIO(data)).convert("RGB").save(path, quality=92)
+        return [str(path)]
+    path = folder / f"photo{n}{ext if ext in PHOTO_EXTS else '.jpg'}"
+    path.write_bytes(data)
+    with Image.open(path) as im:
+        im.verify()
+    return [str(path)]
+
+
+def _pharmacist_shell(title: str, inner: str) -> str:
+    return page(title, f"<div class='auth'>{inner}</div>", "en", topbar("en", lambda c: f"/?lang={c}"))
+
+
+def login_page(nxt: str = "", error: str = "") -> str:
+    esc = html.escape
+    err = f"<div class='notice' role='alert'>{icon('alert')}<div>{esc(error)}</div></div>" if error else ""
+    return _pharmacist_shell("Pharmacist sign in", f"""
+<h1>Pharmacist sign in</h1>
+<p class="lede">Only verified pharmacists can confirm medicines. Sign in with your State Pharmacy Council
+registration number.</p>{err}
+<form method="post" action="/pharmacist/login" class="stack">
+  <input type="hidden" name="next" value="{esc(nxt)}">
+  <label class="field">Registration number <input name="reg_no" required autocomplete="username"></label>
+  <label class="field">Password <input name="password" type="password" required autocomplete="current-password"></label>
+  <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+</form>
+<p class="small">New here? <a href="/pharmacist/apply">Apply with your registration certificate</a></p>""")
+
+
+def apply_page(form=None, errors=(), done: bool = False) -> str:
+    esc = html.escape
+    form = form or {}
+    if done:
+        return _pharmacist_shell("Application received", """
+<h1>Application received</h1>
+<p class="lede">We are checking your registration certificate against the Pharmacy Council register.
+You can sign in once it is approved.</p><a class="btn btn-outline" href="/">Back to Strip Reader</a>""")
+    err = "".join(f"<div class='err'>{esc(e)}</div>" for e in errors)
+    v = lambda k: esc(form.get(k, ""))
+    return _pharmacist_shell("Pharmacist application", f"""
+<h1>Apply as a pharmacist</h1>
+<p class="lede">Upload your State Pharmacy Council Registration Certificate. It is read automatically, then
+checked by a person against the council register before your account works.</p>{err}
+<form method="post" action="/pharmacist/apply" enctype="multipart/form-data" class="stack">
+  <label class="field">Full name (as on the certificate) <input name="name" value="{v('name')}" required></label>
+  <label class="field">Registration number <input name="reg_no" value="{v('reg_no')}" required></label>
+  <label class="field">Pharmacy Council <input name="council" value="{v('council')}" placeholder="e.g. Odisha State Pharmacy Council" required></label>
+  <label class="field">Registration certificate (photo or PDF)
+    <input name="certificate" type="file" accept="image/*,.heic,.pdf,application/pdf" required></label>
+  <label class="field">Choose a password (8+ characters) <input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
+  <button class="btn btn-primary btn-block" type="submit">Send application</button>
+</form>
+<p class="small">Already approved? <a href="/pharmacist/login">Sign in</a></p>""")
 
 
 def history_page(lang: str, runs: list[dict]) -> str:
@@ -273,7 +435,7 @@ SCRIPT = """<script>
         previews = document.getElementById('previews'), count = document.getElementById('count'),
         loading = document.getElementById('loading'), cam = document.getElementById('cam'),
         video = document.getElementById('video');
-  const chosen = __CHOSEN__, blocked = __BLOCKED__, MAX = __MAX__;
+  const chosen = __CHOSEN__, blocked = __BLOCKED__, allow = __ALLOW__, tip = __TIP__, MAX = __MAX__;
   let files = [], stream = null;
 
   // One list of photos from the gallery and the camera, put back into the form's file input.
@@ -283,23 +445,42 @@ SCRIPT = """<script>
     input.files = dt.files;
     previews.innerHTML = '';
     files.slice(0, MAX).forEach(f => {
-      const img = document.createElement('img'); img.alt = ''; img.src = URL.createObjectURL(f); previews.appendChild(img);
+      if (/^image\\/(jpeg|png|webp|gif)$/.test(f.type)) {
+        const img = document.createElement('img'); img.alt = ''; img.src = URL.createObjectURL(f); previews.appendChild(img);
+      } else {   // PDF or iPhone HEIC: the browser can't show it, so show the file type
+        const chip = document.createElement('span'); chip.className = 'file-chip';
+        chip.textContent = (f.name.split('.').pop() || 'file').toUpperCase(); chip.title = f.name; previews.appendChild(chip);
+      }
     });
     count.hidden = !files.length; count.textContent = chosen.replace('{n}', Math.min(files.length, MAX));
-    document.getElementById('go').hidden = !files.length;   // one clear next step at a time
+    const go = document.getElementById('go');
+    go.hidden = !files.length;   // one clear next step at a time
+    if (files.length) { go.scrollIntoView({ behavior: 'smooth', block: 'center' }); go.classList.add('pulse'); }
   }
   input.addEventListener('change', () => { files = files.concat([...input.files]); sync(); });
   phonecam.addEventListener('change', () => { files = files.concat([...phonecam.files]); sync(); });
 
   // Live camera in the page (laptops and phones); if not allowed, the phone's own camera app.
+  // The camera screen opens at once, so the tap always does something. It asks the person to
+  // allow the camera; if the browser refuses (or never answers), it offers "Choose photo".
+  const hint = document.getElementById('camhint'), shoot = document.getElementById('shoot'),
+        pick = document.getElementById('campick');
+  function camFailed() {
+    if (stream) return;
+    if (/Android|iPhone|iPad/i.test(navigator.userAgent)) { stopCam(); phonecam.click(); return; }
+    hint.textContent = blocked; pick.hidden = false; shoot.hidden = true;
+  }
   document.getElementById('camera').addEventListener('click', async () => {
+    hint.textContent = allow; pick.hidden = true; shoot.hidden = false; shoot.disabled = true; cam.hidden = false;
+    const waited = setTimeout(camFailed, 12000);
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 } } });
-      video.srcObject = stream; cam.hidden = false;
-    } catch (e) {
-      if (/Android|iPhone|iPad/i.test(navigator.userAgent)) phonecam.click(); else alert(blocked);
-    }
+      clearTimeout(waited);
+      if (cam.hidden) { stopCam(); return; }          // closed while waiting
+      video.srcObject = stream; hint.textContent = tip; shoot.disabled = false; pick.hidden = true; shoot.hidden = false;
+    } catch (e) { clearTimeout(waited); camFailed(); }
   });
+  pick.addEventListener('click', () => stopCam());
   document.getElementById('shoot').addEventListener('click', () => {
     const c = document.createElement('canvas');
     c.width = video.videoWidth; c.height = video.videoHeight;
@@ -315,14 +496,13 @@ SCRIPT = """<script>
   document.querySelectorAll('form.upload, form.sample').forEach(f =>
     f.addEventListener('submit', e => {
       if (f.id === 'upload' && !files.length) { e.preventDefault(); input.click(); return; }
-      stopCam(); startReading(f.id === 'upload' ? files[0] : null);
+      stopCam(); startReading();
     }));
-  // Reading screen: the person's own photo with a moving scan line (or a pill animation for
-  // the sample), and the stages ticked off one by one while the server works.
-  function startReading(photo) {
-    const box = document.getElementById('scanbox'), pill = document.getElementById('pillanim'),
+  // Reading screen: the popping medicine icons and the stages ticked off one by one
+  // while the server works.
+  function startReading() {
+    const pill = document.getElementById('pillanim'),
           items = [...document.querySelectorAll('#stages li')], text = document.getElementById('stagetext');
-    if (photo) { document.getElementById('scanimg').src = URL.createObjectURL(photo); box.hidden = false; pill.hidden = true; }
     let i = 0;
     const show = () => {
       items.forEach((li, k) => { li.className = k < i ? 'st-done' : (k === i ? 'st-now' : ''); });
