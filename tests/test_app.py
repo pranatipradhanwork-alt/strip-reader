@@ -213,7 +213,11 @@ def test_first_visit_asks_who_and_remembers(tmp_path):
 
     ph = app.test_client()
     assert "/pharmacist/login" in ph.get("/start/pharmacist").headers["Location"]
-    assert "/pharmacist/login" in ph.get("/").headers["Location"]          # remembered for the pharmacist too
+    login = ph.get("/pharmacist/login").data.decode()
+    assert "class=\"back\" href=\"/\"" in login                         # a wrong tap can go back
+    assert "Who is using the app?" in ph.get("/?lang=en").data.decode()            # not trapped before signing in
     ph.post("/pharmacist/login", data={"reg_no": "OR-12345", "password": "s3cret-pass"})
-    assert ph.get("/").headers["Location"] == "/pharmacist/inbox"
+    assert ph.get("/").headers["Location"] == "/pharmacist/inbox"          # remembered after signing in
+    ph.post("/pharmacist/logout")
+    assert "Who is using the app?" in ph.get("/?lang=en").data.decode()            # signing out forgets the choice
     assert app.test_client().get("/start/admin").status_code == 404

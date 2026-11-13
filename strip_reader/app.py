@@ -104,13 +104,18 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
         session.clear()
         session.permanent = True
         session["pharmacist"] = rec["reg_no"]
-        return redirect(nxt if re.match(r"^/r/[0-9]{8}-[0-9a-f]{8}/(review|chat)(\?lang=[a-z]{2})?$", nxt)
+        resp = redirect(nxt if re.match(r"^/r/[0-9]{8}-[0-9a-f]{8}/(review|chat)(\?lang=[a-z]{2})?$", nxt)
                         else "/pharmacist/inbox")
+        # Remembered as a pharmacist only after a real sign-in, so a wrong tap never traps anyone.
+        resp.set_cookie(ROLE_COOKIE, "pharmacist", max_age=365 * 24 * 3600, samesite="Lax", httponly=True)
+        return resp
 
     @app.post("/pharmacist/logout")
     def logout():
         session.clear()
-        return redirect("/")
+        resp = redirect("/")
+        resp.delete_cookie(ROLE_COOKIE)      # back to the welcome screen
+        return resp
 
     @app.get("/pharmacist/apply")
     def apply_form():
@@ -180,20 +185,21 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
     @app.get("/")
     def home():
         role = request.cookies.get(ROLE_COOKIE)
-        if role == "pharmacist":
-            return redirect("/pharmacist/inbox" if pharmacist() else "/pharmacist/login")
-        if role != "patient" and not my_runs():      # first visit: who are you?
+        if role == "pharmacist" and pharmacist():
+            return redirect("/pharmacist/inbox")
+        if role != "patient" and not my_runs():      # first visit (or signed out): who are you?
             return welcome_page(lang_arg())
         return home_page(lang_arg())
 
     @app.get("/start/<role>")
     def start(role):
-        """Welcome-screen choice, remembered for a year (can be switched any time)."""
+        """Welcome-screen choice. "Patient" is remembered at once; "pharmacist" only after signing in."""
         if role not in ("patient", "pharmacist"):
             abort(404)
-        to = f"/?lang={lang_arg()}" if role == "patient" else ("/pharmacist/inbox" if pharmacist() else "/pharmacist/login")
-        resp = redirect(to)
-        resp.set_cookie(ROLE_COOKIE, role, max_age=365 * 24 * 3600, samesite="Lax", httponly=True)
+        if role == "pharmacist":
+            return redirect("/pharmacist/inbox" if pharmacist() else "/pharmacist/login")
+        resp = redirect(f"/?lang={lang_arg()}")
+        resp.set_cookie(ROLE_COOKIE, "patient", max_age=365 * 24 * 3600, samesite="Lax", httponly=True)
         return resp
 
     @app.post("/read")
@@ -464,6 +470,7 @@ def login_page(nxt: str = "", error: str = "") -> str:
     esc = html.escape
     err = f"<div class='notice' role='alert'>{icon('alert')}<div>{esc(error)}</div></div>" if error else ""
     return _pharmacist_shell("Pharmacist sign in", f"""
+<a class="back" href="/">{icon('back', 18)}Back</a>
 <h1>Pharmacist sign in</h1>
 <p class="lede">Only verified pharmacists can confirm medicines. Sign in with your State Pharmacy Council
 registration number.</p>{err}
@@ -488,6 +495,7 @@ You can sign in once it is approved.</p><a class="btn btn-outline" href="/">Back
     err = "".join(f"<div class='err'>{esc(e)}</div>" for e in errors)
     v = lambda k: esc(form.get(k, ""))
     return _pharmacist_shell("Pharmacist application", f"""
+<a class="back" href="/pharmacist/login">{icon('back', 18)}Back to sign in</a>
 <h1>Apply as a pharmacist</h1>
 <p class="lede">Upload your State Pharmacy Council Registration Certificate. It is read automatically, then
 checked by a person against the council register before your account works.</p>{err}
