@@ -115,5 +115,12 @@
   "chat_sent": "Question sent",
   "chat_empty": "Please type a question.",
   "chat_too_long": "Please keep it shorter.",
-  "chat_too_many": "This chat has too many messages. Please visit a pharmacy."
+  "chat_too_many": "This chat has too many messages. Please visit a pharmacy.",
+  "welcome_title": "Welcome to Strip Reader",
+  "welcome_sub": "Who is using the app?",
+  "role_patient": "Read my medicines",
+  "role_patient_sub": "Take a photo of a strip, box or prescription",
+  "role_pharmacist": "I'm a pharmacist",
+  "role_pharmacist_sub": "Answer questions and confirm readings (verified accounts)",
+  "for_pharmacists": "For pharmacists"
 }

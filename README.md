@@ -103,6 +103,8 @@ The review page lists every item not yet on the card, with its label crop and th
 
 ### Only verified pharmacists can confirm
 
+On the first visit the app asks who is using it: **Read my medicines** or **I'm a pharmacist**. The choice is remembered on that device, and a *For pharmacists* link is always there to switch.
+
 Anyone can *say* they are a pharmacist, so the web app never trusts a typed name.
 
 | Step | What happens |
@@ -257,7 +259,7 @@ data/
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py
-tests/           120 tests, no API key needed
+tests/           121 tests, no API key needed
 ```
 
 ## Testing

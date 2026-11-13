@@ -85,7 +85,14 @@
     "chat_sent",
     "chat_empty",
     "chat_too_long",
-    "chat_too_many"
+    "chat_too_many",
+    "welcome_title",
+    "welcome_sub",
+    "role_patient",
+    "role_patient_sub",
+    "role_pharmacist",
+    "role_pharmacist_sub",
+    "for_pharmacists"
   ],
   "title": "ଆଜିର ଔଷଧ",
   "morning": "ସକାଳ",
@@ -200,5 +207,12 @@
   "chat_sent": "ପ୍ରଶ୍ନ ପଠାଗଲା",
   "chat_empty": "ଦୟାକରି ପ୍ରଶ୍ନ ଲେଖନ୍ତୁ।",
   "chat_too_long": "ଦୟାକରି ଛୋଟ କରି ଲେଖନ୍ତୁ।",
-  "chat_too_many": "ଏହି ଚାଟରେ ବହୁତ ମେସେଜ ହୋଇଗଲା। ଦୟାକରି ଫାର୍ମାସିକୁ ଯାଆନ୍ତୁ।"
+  "chat_too_many": "ଏହି ଚାଟରେ ବହୁତ ମେସେଜ ହୋଇଗଲା। ଦୟାକରି ଫାର୍ମାସିକୁ ଯାଆନ୍ତୁ।",
+  "welcome_title": "Strip Readerକୁ ସ୍ୱାଗତ",
+  "welcome_sub": "ଆପ୍ କିଏ ବ୍ୟବହାର କରୁଛନ୍ତି?",
+  "role_patient": "ମୋ ଔଷଧ ପଢ଼ନ୍ତୁ",
+  "role_patient_sub": "ଷ୍ଟ୍ରିପ୍, ବାକ୍ସ ବା ପ୍ରେସକ୍ରିପସନର ଫଟୋ ନିଅନ୍ତୁ",
+  "role_pharmacist": "ମୁଁ ଜଣେ ଫାର୍ମାସିଷ୍ଟ",
+  "role_pharmacist_sub": "ପ୍ରଶ୍ନର ଉତ୍ତର ଦିଅନ୍ତୁ ଓ ପଢ଼ା ଯାଞ୍ଚ କରନ୍ତୁ (ଯାଞ୍ଚିତ ଆକାଉଣ୍ଟ)",
+  "for_pharmacists": "ଫାର୍ମାସିଷ୍ଟଙ୍କ ପାଇଁ"
 }

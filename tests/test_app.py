@@ -30,7 +30,9 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "CACHE", tmp_path / "cache")
     app = create_app(tmp_path / "runs", reader=fake_reader, uses_fn=None, speak_fn=None,
                      registry=approved_registry(tmp_path / "instance"))
-    return app.test_client()
+    c = app.test_client()
+    c.set_cookie("sr_role", "patient")
+    return c
 
 
 def png_bytes():
@@ -197,3 +199,21 @@ def test_upload_pdf_goes_to_card(client):
     r = client.post("/read", data={"lang": "en", "photos": (io.BytesIO(pdf.getvalue()), "prescription.pdf")},
                     content_type="multipart/form-data")
     assert r.status_code == 302
+
+
+def test_first_visit_asks_who_and_remembers(tmp_path):
+    app = create_app(tmp_path / "runs", uses_fn=None, speak_fn=None, registry=approved_registry(tmp_path / "inst"))
+    c = app.test_client()
+    page = c.get("/?lang=en").data.decode()
+    assert "Who is using the app?" in page and "/start/patient" in page and "/start/pharmacist" in page
+    r = c.get("/start/patient?lang=en")
+    assert r.headers["Location"] == "/?lang=en"
+    assert "Read my medicines" in c.get("/?lang=en").data.decode()          # remembered: straight to the reader
+    assert "For pharmacists" in c.get("/?lang=en").data.decode()            # can always switch
+
+    ph = app.test_client()
+    assert "/pharmacist/login" in ph.get("/start/pharmacist").headers["Location"]
+    assert "/pharmacist/login" in ph.get("/").headers["Location"]          # remembered for the pharmacist too
+    ph.post("/pharmacist/login", data={"reg_no": "OR-12345", "password": "s3cret-pass"})
+    assert ph.get("/").headers["Location"] == "/pharmacist/inbox"
+    assert app.test_client().get("/start/admin").status_code == 404
