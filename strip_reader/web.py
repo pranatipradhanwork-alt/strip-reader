@@ -111,13 +111,14 @@ def topbar(lang: str, lang_href, right: str = "") -> str:
 
 
 def tabbar(lang: str, current: str = "read") -> str:
-    """Bottom tab bar on phones (Read / History), like a native app."""
+    """Bottom tab bar on phones (Read / History / Pharmacist), like a native app."""
     L = labels(lang)
     esc = html.escape
     tab = lambda key, href, ico, text: (f"<a href='{href}'{' aria-current=\'page\'' if current == key else ''}>"
                                         f"{icon(ico, 22)}{esc(text)}</a>")
     return (f"<nav class='tabbar' aria-label='Main'>{tab('read', f'/?lang={lang}', 'camera', L['read_tab'])}"
-            f"{tab('history', f'/history?lang={lang}', 'clock', L['history'])}</nav>")
+            f"{tab('history', f'/history?lang={lang}', 'clock', L['history'])}"
+            f"{tab('pharmacist', '/start/pharmacist', 'check_user', L['pharmacist_tab'])}</nav>")
 
 
 def page(title: str, body: str, lang: str = "en", bar: str = "", tabs: str = "") -> str:
