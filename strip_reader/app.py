@@ -35,6 +35,7 @@ FIX = ROOT / "tests" / "fixtures"
 MAX_PHOTOS = 6
 MAX_HISTORY = 50
 COOKIE = "sr_runs"
+ROLE_COOKIE = "sr_role"     # "patient" or "pharmacist": asked once on the welcome screen
 RID_RE = re.compile(r"^[0-9]{8}-[0-9a-f]{8}$")
 
 
@@ -178,7 +179,22 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
 
     @app.get("/")
     def home():
+        role = request.cookies.get(ROLE_COOKIE)
+        if role == "pharmacist":
+            return redirect("/pharmacist/inbox" if pharmacist() else "/pharmacist/login")
+        if role != "patient" and not my_runs():      # first visit: who are you?
+            return welcome_page(lang_arg())
         return home_page(lang_arg())
+
+    @app.get("/start/<role>")
+    def start(role):
+        """Welcome-screen choice, remembered for a year (can be switched any time)."""
+        if role not in ("patient", "pharmacist"):
+            abort(404)
+        to = f"/?lang={lang_arg()}" if role == "patient" else ("/pharmacist/inbox" if pharmacist() else "/pharmacist/login")
+        resp = redirect(to)
+        resp.set_cookie(ROLE_COOKIE, role, max_age=365 * 24 * 3600, samesite="Lax", httponly=True)
+        return resp
 
     @app.post("/read")
     def read():
@@ -343,7 +359,7 @@ def home_page(lang: str, error: str = "") -> str:
   <h2>{esc(L['how_title'])}</h2>
   <ol><li>{esc(L['step1'])}</li><li>{esc(L['step2'])}</li><li>{esc(L['step3'])}</li></ol>
   <a class="urgent" href="tel:108">{icon('phone', 20)}<span>{esc(L['urgent'])}</span></a>
-  <p class="disclaimer">{esc(L['footer'])}</p>
+  <p class="disclaimer">{esc(L['footer'])} · <a href="/start/pharmacist">{esc(L['for_pharmacists'])}</a></p>
 </section>
 <div class="cam" id="cam" hidden>
   <video id="video" playsinline autoplay muted></video>
@@ -415,6 +431,26 @@ def save_upload(f, folder: Path, n: int, room: int) -> list[str]:
     return [str(path)]
 
 
+def welcome_page(lang: str) -> str:
+    """First screen: a patient who wants to read their medicines, or a pharmacist."""
+    L = labels(lang)
+    esc = html.escape
+    choice = lambda href, ico, title, sub, cls: (
+        f"<a class='choice {cls}' href='{href}'><span class='choice-icon'>{icon(ico, 28)}</span>"
+        f"<span class='choice-text'><b>{esc(title)}</b><span>{esc(sub)}</span></span>{icon('arrow', 20)}</a>")
+    body = f"""<section class='welcome'>
+  <span class='welcome-mark'>{icon('logo', 34)}</span>
+  <h1>{esc(L['welcome_title'])}</h1>
+  <p class='lede'>{esc(L['welcome_sub'])}</p>
+  <div class='choices-big'>
+    {choice(f'/start/patient?lang={lang}', 'camera', L['role_patient'], L['role_patient_sub'], 'primary')}
+    {choice(f'/start/pharmacist?lang={lang}', 'check_user', L['role_pharmacist'], L['role_pharmacist_sub'], '')}
+  </div>
+  <p class='disclaimer'>{esc(L['footer'])}</p>
+</section>"""
+    return page(L["app_name"], body, lang, topbar(lang, lambda c: f"/?lang={c}"))
+
+
 def pharmacist_links(current: str = "") -> str:
     """Top-bar links for a signed-in pharmacist."""
     cur = lambda k: " aria-current='page'" if k == current else ""
@@ -438,7 +474,8 @@ registration number.</p>{err}
   <label class="field">Password <input name="password" type="password" required autocomplete="current-password"></label>
   <button class="btn btn-primary btn-block" type="submit">Sign in</button>
 </form>
-<p class="small">New here? <a href="/pharmacist/apply">Apply with your registration certificate</a></p>""")
+<p class="small">New here? <a href="/pharmacist/apply">Apply with your registration certificate</a></p>
+<p class="small">Not a pharmacist? <a href="/start/patient">Read my medicines</a></p>""")
 
 
 def apply_page(form=None, errors=(), done: bool = False) -> str:

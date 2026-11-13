@@ -161,7 +161,8 @@ def history_link(lang: str, current: str = "") -> str:
     link = lambda key, href, text: (f"<a class='navlink' href='{href}'"
                                     f"{' aria-current=\'page\'' if key == current else ''}>{html.escape(text)}</a>")
     return (f"<nav class='navlinks'>{link('read', f'/?lang={lang}', L['read_tab'])}"
-            f"{link('history', f'/history?lang={lang}', L['history'])}</nav>")
+            f"{link('history', f'/history?lang={lang}', L['history'])}"
+            f"{link('pharmacist', '/start/pharmacist', L['for_pharmacists'])}</nav>")
 
 
 def review_page(run: Run, base: str, lang: str = "en", errors=None, form=None, pharmacist=None) -> str:
