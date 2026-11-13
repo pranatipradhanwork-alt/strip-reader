@@ -484,6 +484,22 @@ registration number.</p>{err}
 <p class="small">Not a pharmacist? <a href="/start/patient">Read my medicines</a></p>""")
 
 
+PW_SCRIPT = """<script>
+(() => {
+  // Live password checklist: each rule turns green when met; on send, unmet rules turn red.
+  const pw = document.getElementById('pw'), rules = [...document.querySelectorAll('#pwrules li')];
+  const test = { len: v => v.length >= 8, let: v => /[A-Za-z]/.test(v), num: v => /\\d/.test(v) };
+  const check = (strict) => rules.map(li => {
+    const ok = test[li.dataset.rule](pw.value);
+    li.className = ok ? 'ok' : (strict || pw.value ? 'bad' : '');
+    return ok;
+  }).every(Boolean);
+  pw.addEventListener('input', () => check(false));
+  pw.form.addEventListener('submit', e => { if (!check(true)) { e.preventDefault(); pw.focus(); } });
+})();
+</script>"""
+
+
 def apply_page(form=None, errors=(), done: bool = False) -> str:
     esc = html.escape
     form = form or {}
@@ -505,10 +521,15 @@ checked by a person against the council register before your account works.</p>{
   <label class="field">Pharmacy Council <input name="council" value="{v('council')}" placeholder="e.g. Odisha State Pharmacy Council" required></label>
   <label class="field">Registration certificate (photo or PDF)
     <input name="certificate" type="file" accept="image/*,.heic,.pdf,application/pdf" required></label>
-  <label class="field">Choose a password (8+ characters) <input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
+  <label class="field">Choose a password <input name="password" id="pw" type="password" minlength="8" required
+    autocomplete="new-password" aria-describedby="pwrules"></label>
+  <ul class="pw-rules" id="pwrules" aria-live="polite">
+    <li data-rule="len">At least 8 characters</li><li data-rule="let">At least one letter</li><li data-rule="num">At least one number</li>
+  </ul>
   <button class="btn btn-primary btn-block" type="submit">Send application</button>
 </form>
-<p class="small">Already approved? <a href="/pharmacist/login">Sign in</a></p>""")
+<p class="small">Already approved? <a href="/pharmacist/login">Sign in</a></p>
+{PW_SCRIPT}""")
 
 
 def history_page(lang: str, runs: list[dict]) -> str:
