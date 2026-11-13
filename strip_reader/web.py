@@ -121,9 +121,28 @@ def tabbar(lang: str, current: str = "read") -> str:
             f"{tab('pharmacist', '/start/pharmacist', 'check_user', L['pharmacist_tab'])}</nav>")
 
 
-def page(title: str, body: str, lang: str = "en", bar: str = "", tabs: str = "") -> str:
+def splash(lang: str) -> str:
+    """Opening screen (once per visit): logo, name, then a strong caption, fading into the app.
+
+    The tiny script right after it removes it at once if it was already shown in this visit,
+    so it never flashes on later pages.
+    """
+    L = labels(lang)
+    esc = html.escape
+    return (f"<div class='splash' id='splash' aria-hidden='true'><div class='splash-inner'>"
+            f"<span class='splash-mark'>{icon('logo', 46)}</span>"
+            f"<span class='splash-name'>Strip Reader</span>"
+            f"<span class='splash-caption'>{esc(L['splash_caption'])}</span></div></div>"
+            "<script>(()=>{const el=document.getElementById('splash');let seen=false;"
+            "try{seen=sessionStorage.getItem('sr_splash')==='1';sessionStorage.setItem('sr_splash','1');}catch(e){}"
+            "if(seen){el.remove();return;}"
+            "el.addEventListener('animationend',e=>{if(e.target===el)el.remove();});"
+            "setTimeout(()=>el.remove(),4000);})();</script>")
+
+
+def page(title: str, body: str, lang: str = "en", bar: str = "", tabs: str = "", opening: bool = False) -> str:
     return (f"<!doctype html><html lang='{lang}'><head>{head(title)}</head>"
-            f"<body class='has-tabs'>{bar}<main class='wrap'>{body}</main>{tabs}</body></html>")
+            f"<body class='has-tabs'>{splash(lang) if opening else ''}{bar}<main class='wrap'>{body}</main>{tabs}</body></html>")
 
 
 def card_page(run: Run, lang: str, base: str, voice: bool, uses_fn, speak_fn, can_retry: bool = False,

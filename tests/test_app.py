@@ -222,3 +222,10 @@ def test_first_visit_asks_who_and_remembers(tmp_path):
     ph.post("/pharmacist/logout")
     assert "Who is using the app?" in ph.get("/?lang=en").data.decode()            # signing out forgets the choice
     assert app.test_client().get("/start/admin").status_code == 404
+
+
+def test_opening_screen_only_on_the_first_pages(client):
+    home = client.get("/?lang=en").data.decode()
+    assert "id='splash'" in home and "Every medicine, read right." in home
+    loc = client.post("/sample", data={"lang": "en"}).headers["Location"]
+    assert "id='splash'" not in client.get(loc).data.decode()          # never over the card

@@ -93,7 +93,8 @@
     "role_pharmacist",
     "role_pharmacist_sub",
     "for_pharmacists",
-    "pharmacist_tab"
+    "pharmacist_tab",
+    "splash_caption"
   ],
   "title": "ଆଜିର ଔଷଧ",
   "morning": "ସକାଳ",
@@ -216,5 +217,6 @@
   "role_pharmacist": "ମୁଁ ଜଣେ ଫାର୍ମାସିଷ୍ଟ",
   "role_pharmacist_sub": "ପ୍ରଶ୍ନର ଉତ୍ତର ଦିଅନ୍ତୁ ଓ ପଢ଼ା ଯାଞ୍ଚ କରନ୍ତୁ (ଯାଞ୍ଚିତ ଆକାଉଣ୍ଟ)",
   "for_pharmacists": "ଫାର୍ମାସିଷ୍ଟଙ୍କ ପାଇଁ",
-  "pharmacist_tab": "ଫାର୍ମାସିଷ୍ଟ"
+  "pharmacist_tab": "ଫାର୍ମାସିଷ୍ଟ",
+  "splash_caption": "ପ୍ରତ୍ୟେକ ଔଷଧ, ଠିକ୍ ପଢ଼ା।"
 }
