@@ -499,3 +499,9 @@ html:not([data-theme="dark"]) .splash { background: linear-gradient(165deg, #fbd
 html:not([data-theme="dark"]) .splash-mark { background: #fff; color: #e8335a; box-shadow: 0 18px 40px rgba(160, 20, 55, .25); }
 html:not([data-theme="dark"]) .splash-name { color: #2a0a12; }
 html:not([data-theme="dark"]) .splash-caption { color: #a3123a; }
+/* Light opening screen, final: clean white with a soft pink glow (option 2). */
+html:not([data-theme="dark"]) .splash { background: radial-gradient(90% 55% at 50% 40%, #ffe3ea 0%, #ffffff 70%); }
+html:not([data-theme="dark"]) .splash-mark { background: linear-gradient(135deg, #e8335a, #ff6b8a); color: #fff;
+  box-shadow: 0 18px 40px rgba(232, 51, 90, .28); }
+html:not([data-theme="dark"]) .splash-name { color: #1c1c1e; }
+html:not([data-theme="dark"]) .splash-caption { color: #d42a50; }
