@@ -319,7 +319,7 @@ SCRIPT = """<script>
     input.files = dt.files;
     previews.innerHTML = '';
     files.slice(0, MAX).forEach(f => {
-      if (/^image\/(jpeg|png|webp|gif)$/.test(f.type)) {
+      if (/^image\\/(jpeg|png|webp|gif)$/.test(f.type)) {
         const img = document.createElement('img'); img.alt = ''; img.src = URL.createObjectURL(f); previews.appendChild(img);
       } else {   // PDF or iPhone HEIC: the browser can't show it, so show the file type
         const chip = document.createElement('span'); chip.className = 'file-chip';
