@@ -494,3 +494,8 @@ html[data-theme="dark"] .splash-mark { background: var(--glass); border: 1px sol
 /* Light theme opening screen: soft translucent pink instead of plain white. */
 html:not([data-theme="dark"]) .splash {
   background: radial-gradient(120% 80% at 50% 38%, rgba(232, 51, 90, .20) 0%, rgba(255, 107, 138, .10) 45%, rgba(232, 51, 90, .04) 100%), #fff6f8; }
+/* Light opening screen, more solid: a full soft-rose gradient, white logo tile. */
+html:not([data-theme="dark"]) .splash { background: linear-gradient(165deg, #fbd0db 0%, #f6aebf 55%, #f29ab0 100%); }
+html:not([data-theme="dark"]) .splash-mark { background: #fff; color: #e8335a; box-shadow: 0 18px 40px rgba(160, 20, 55, .25); }
+html:not([data-theme="dark"]) .splash-name { color: #2a0a12; }
+html:not([data-theme="dark"]) .splash-caption { color: #a3123a; }
