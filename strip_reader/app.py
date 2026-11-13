@@ -446,7 +446,6 @@ def welcome_page(lang: str) -> str:
     {choice(f'/start/patient?lang={lang}', 'camera', L['role_patient'], L['role_patient_sub'], 'primary')}
     {choice(f'/start/pharmacist?lang={lang}', 'check_user', L['role_pharmacist'], L['role_pharmacist_sub'], '')}
   </div>
-  <p class='disclaimer'>{esc(L['footer'])}</p>
 </section>"""
     return page(L["app_name"], body, lang, topbar(lang, lambda c: f"/?lang={c}"))
 
