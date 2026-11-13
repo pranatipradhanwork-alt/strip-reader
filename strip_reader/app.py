@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, Response, abort, redirect, request, session
+from flask import Flask, Response, abort, jsonify, redirect, request, session
 from PIL import Image
 
 from .card import LANGS, labels
@@ -27,6 +27,7 @@ from .leaflets import what_its_for
 from .voice import speak
 from .icons import icon
 from .pharmacists import Registry
+from . import chat
 from .web import Run, card_page, history_link, page, review_page, tabbar, topbar
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -102,7 +103,8 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
         session.clear()
         session.permanent = True
         session["pharmacist"] = rec["reg_no"]
-        return redirect(nxt if re.match(r"^/r/[0-9]{8}-[0-9a-f]{8}/review(\?lang=[a-z]{2})?$", nxt) else "/")
+        return redirect(nxt if re.match(r"^/r/[0-9]{8}-[0-9a-f]{8}/(review|chat)(\?lang=[a-z]{2})?$", nxt)
+                        else "/pharmacist/inbox")
 
     @app.post("/pharmacist/logout")
     def logout():
@@ -162,7 +164,8 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
             on_card = len({e["id"] for k in ("morning", "afternoon", "evening", "night", "as_needed") for e in sched[k]})
             when = time.strftime("%d %b %Y, %H:%M", time.localtime((run.dir / "result.json").stat().st_mtime))
             photos = len([f for f in (run.dir / "photos").iterdir() if f.is_file()]) if (run.dir / "photos").exists() else 0
-            summaries.append({"rid": rid, "when": when, "photos": photos, "on_card": on_card, "ask": len(sched["ask"])})
+            summaries.append({"rid": rid, "when": when, "photos": photos, "on_card": on_card, "ask": len(sched["ask"]),
+                              "chat": chat.status(chat.load(run.dir))})
         return history_page(lang_arg(), summaries)
 
     @app.post("/r/<rid>/delete")
@@ -203,8 +206,60 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
 
     @app.get("/r/<rid>/card")
     def card(rid):
-        return card_page(get_run(rid), lang_arg(), f"/r/{rid}", bool(request.args.get("voice")), uses_fn, speak_fn,
-                         can_retry=True)
+        run = get_run(rid)
+        msgs = chat.load(run.dir) if rid in my_runs() else None    # only the person who asked sees the chat link
+        return card_page(run, lang_arg(), f"/r/{rid}", bool(request.args.get("voice")), uses_fn, speak_fn,
+                         can_retry=True, chat_state=None if msgs is None else chat.status(msgs))
+
+    # ---------- Ask a pharmacist ----------
+
+    def chat_viewer(rid: str) -> tuple[str, dict | None]:
+        """Who may see this chat: the browser that made the reading, or a verified pharmacist."""
+        ph = pharmacist()
+        if ph:
+            return "pharmacist", ph
+        if rid in my_runs():
+            return "patient", None
+        abort(404)
+
+    def chat_page(rid: str, error: str = ""):
+        run = get_run(rid)
+        viewer, ph = chat_viewer(rid)
+        lang = lang_arg() if viewer == "patient" else "en"
+        L = labels(lang)
+        bar = topbar(lang, lambda c: f"/r/{rid}/chat?lang={c}",
+                     right=history_link(lang) if viewer == "patient" else pharmacist_links())
+        return page(L["ask_pharmacist"], chat.chat_body(rid, run, lang, viewer, error), lang, bar,
+                    tabbar(lang, "") if viewer == "patient" else "")
+
+    @app.get("/r/<rid>/chat")
+    def chat_get(rid):
+        return chat_page(rid)
+
+    @app.post("/r/<rid>/chat")
+    def chat_post(rid):
+        get_run(rid)
+        viewer, ph = chat_viewer(rid)
+        problem = chat.add(base_dir / rid, viewer, request.form.get("text", ""), ph)
+        if problem:
+            return chat_page(rid, problem), 400
+        return redirect(f"/r/{rid}/chat?lang={lang_arg() if viewer == 'patient' else 'en'}")
+
+    @app.get("/r/<rid>/chat/messages")
+    def chat_messages(rid):
+        get_run(rid)
+        viewer, _ = chat_viewer(rid)
+        msgs = chat.load(base_dir / rid)
+        lang = lang_arg() if viewer == "patient" else "en"
+        return jsonify(messages=chat.public(msgs, lang, viewer), status=chat.status(msgs))
+
+    @app.get("/pharmacist/inbox")
+    def inbox():
+        ph = pharmacist()
+        if not ph:
+            return redirect("/pharmacist/login")
+        return page("Questions", chat.inbox_body(chat.inbox(base_dir), ph), "en",
+                    topbar("en", lambda c: "/pharmacist/inbox", right=pharmacist_links("inbox")))
 
     @app.post("/r/<rid>/retry")
     def retry(rid):
@@ -360,6 +415,12 @@ def save_upload(f, folder: Path, n: int, room: int) -> list[str]:
     return [str(path)]
 
 
+def pharmacist_links(current: str = "") -> str:
+    """Top-bar links for a signed-in pharmacist."""
+    cur = lambda k: " aria-current='page'" if k == current else ""
+    return f"<nav class='navlinks'><a class='navlink' href='/pharmacist/inbox'{cur('inbox')}>Questions</a></nav>"
+
+
 def _pharmacist_shell(title: str, inner: str) -> str:
     return page(title, f"<div class='auth'>{inner}</div>", "en", topbar("en", lambda c: f"/?lang={c}"))
 
@@ -415,7 +476,10 @@ def history_page(lang: str, runs: list[dict]) -> str:
             f"<li class='med' style='display:flex;gap:16px;align-items:center;flex-wrap:wrap'>"
             f"<div style='flex:1;min-width:200px'><div class='name'>{esc(r['when'])}</div>"
             f"<div class='why'>{esc(L['photos_n'].format(n=r['photos']))} · "
-            f"{esc(L['meta'].format(a=r['on_card'], b=r['ask']))}</div></div>"
+            f"{esc(L['meta'].format(a=r['on_card'], b=r['ask']))}</div>"
+            + (f"<span class='badge ok'>{esc(L['pharmacist_replied'])}</span>" if r.get('chat') == 'answered' else "")
+            + (f"<span class='badge wait'>{esc(L['chat_sent'])}</span>" if r.get('chat') == 'waiting' else "")
+            + f"</div>"
             f"<a class='btn btn-primary' href='/r/{r['rid']}/card?lang={lang}'>{esc(L['open'])}</a>"
             f"<form method='post' action='/r/{r['rid']}/delete?lang={lang}' style='margin:0'>"
             f"<button class='btn btn-quiet' type='submit'>{esc(L['delete'])}</button></form></li>")

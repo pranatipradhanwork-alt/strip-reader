@@ -125,7 +125,8 @@ def page(title: str, body: str, lang: str = "en", bar: str = "", tabs: str = "")
             f"<body class='has-tabs'>{bar}<main class='wrap'>{body}</main>{tabs}</body></html>")
 
 
-def card_page(run: Run, lang: str, base: str, voice: bool, uses_fn, speak_fn, can_retry: bool = False) -> str:
+def card_page(run: Run, lang: str, base: str, voice: bool, uses_fn, speak_fn, can_retry: bool = False,
+              chat_state: str | None = None) -> str:
     """The card with the app's top bar and buttons. `base` is the URL prefix of this run."""
     L = labels(lang)
     esc = html.escape
@@ -141,7 +142,13 @@ def card_page(run: Run, lang: str, base: str, voice: bool, uses_fn, speak_fn, ca
     actions = retry + (f"<div class='btn-row'>"
                f"<a class='btn btn-primary' href='{esc(base)}/card?lang={lang}&voice=1'>{icon('speaker')}{esc(L['read_aloud'])}</a>"
                f"<a class='btn btn-outline' href='/?lang={lang}'>{icon('camera')}{esc(L['new_photo'])}</a>"
-               f"<a class='btn btn-quiet' href='{esc(base)}/review?lang={lang}'>{icon('check_user')}{esc(L['pharmacist'])}</a></div>")
+               + (f"<a class='btn btn-quiet' href='{esc(base)}/chat?lang={lang}'>{icon('chat')}{esc(L['ask_pharmacist'])}</a>"
+                  if chat_state is not None else
+                  f"<a class='btn btn-quiet' href='{esc(base)}/review?lang={lang}'>{icon('check_user')}{esc(L['pharmacist'])}</a>")
+               + "</div>")
+    if chat_state == "answered":   # a pharmacist replied: say so at the top of the card
+        actions = (f"<a class='notice reply-notice' href='{esc(base)}/chat?lang={lang}'>{icon('chat')}"
+                   f"<div><b>{esc(L['pharmacist_replied'])}</b> · {esc(L['open'])}</div></a>") + actions
     bar = topbar(lang, lambda c: f"{base}/card?lang={c}", right=history_link(lang) if can_retry else "")
     if can_retry:   # the full app (not the single-run review tool) has the bottom tabs
         bar += tabbar(lang, "")
