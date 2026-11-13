@@ -19,13 +19,14 @@ import time
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, Response, abort, redirect, request
+from flask import Flask, Response, abort, redirect, request, session
 from PIL import Image
 
 from .card import LANGS, labels
 from .leaflets import what_its_for
 from .voice import speak
 from .icons import icon
+from .pharmacists import Registry
 from .web import Run, card_page, history_link, page, review_page, tabbar, topbar
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,11 +46,82 @@ def default_reader(images: list[str], run_dir: Path, mock: str | None = None) ->
     return run(images, run_dir, mock=mock, model=model, budget_s=60)
 
 
+LOGIN_TRIES, LOGIN_WINDOW_S = 5, 600   # 5 wrong passwords in 10 minutes -> wait
+
+
+def secret_key(folder: Path) -> str:
+    """Signs the pharmacist's login cookie. From SECRET_KEY, else made once and kept in instance/."""
+    import os
+    if os.getenv("SECRET_KEY"):
+        return os.environ["SECRET_KEY"]
+    f = folder / "secret_key"
+    if not f.exists():
+        folder.mkdir(parents=True, exist_ok=True)
+        f.write_text(secrets.token_hex(32))
+        f.chmod(0o600)
+    return f.read_text().strip()
+
+
 def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reader,
-               uses_fn=what_its_for, speak_fn=speak) -> Flask:
+               uses_fn=what_its_for, speak_fn=speak, registry: Registry | None = None) -> Flask:
     base_dir = Path(base_dir)
+    registry = registry or Registry()
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = MAX_PHOTOS * 15 * 1024 * 1024
+    app.config.update(SECRET_KEY=secret_key(registry.dir), SESSION_COOKIE_HTTPONLY=True,
+                      SESSION_COOKIE_SAMESITE="Lax", PERMANENT_SESSION_LIFETIME=12 * 3600)
+    failed: dict[str, list[float]] = {}
+
+    def pharmacist() -> dict | None:
+        """The logged-in pharmacist, re-read every time so a disabled account stops at once."""
+        reg = session.get("pharmacist")
+        return registry.get(reg) if reg else None
+
+    def need_login(rid: str):
+        return redirect(f"/pharmacist/login?next=/r/{rid}/review%3Flang={lang_arg()}")
+
+    @app.get("/pharmacist/login")
+    def login_form():
+        return login_page(request.args.get("next", ""))
+
+    @app.post("/pharmacist/login")
+    def login():
+        ip, now = request.remote_addr or "?", time.time()
+        tries = [t for t in failed.get(ip, []) if now - t < LOGIN_WINDOW_S]
+        nxt = request.form.get("next", "")
+        if len(tries) >= LOGIN_TRIES:
+            return login_page(nxt, "Too many wrong tries. Please wait 10 minutes."), 429
+        rec, problem = registry.check(request.form.get("reg_no", ""), request.form.get("password", ""))
+        if not rec:
+            if problem == "wrong":
+                failed[ip] = tries + [now]
+            msg = ("Your application is still being verified. You can sign in once it is approved."
+                   if problem == "pending" else "Registration number or password is wrong.")
+            return login_page(nxt, msg), 401
+        failed.pop(ip, None)
+        session.clear()
+        session.permanent = True
+        session["pharmacist"] = rec["reg_no"]
+        return redirect(nxt if re.match(r"^/r/[0-9]{8}-[0-9a-f]{8}/review(\?lang=[a-z]{2})?$", nxt) else "/")
+
+    @app.post("/pharmacist/logout")
+    def logout():
+        session.clear()
+        return redirect("/")
+
+    @app.get("/pharmacist/apply")
+    def apply_form():
+        return apply_page()
+
+    @app.post("/pharmacist/apply")
+    def apply():
+        f = request.files.get("certificate")
+        errors = registry.apply(request.form.get("name", ""), request.form.get("reg_no", ""),
+                                request.form.get("council", ""), request.form.get("password", ""),
+                                f.filename if f else "", f.read() if f else b"")
+        if errors:
+            return apply_page(request.form, errors), 400
+        return apply_page(done=True)
 
     def lang_arg() -> str:
         lang = request.values.get("lang", "or")
@@ -143,19 +215,27 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
 
     @app.get("/r/<rid>/review")
     def review(rid):
-        return review_page(get_run(rid), f"/r/{rid}", lang_arg())
+        run, ph = get_run(rid), pharmacist()
+        if not ph:
+            return need_login(rid)
+        return review_page(run, f"/r/{rid}", lang_arg(), pharmacist=ph)
 
     @app.post("/r/<rid>/review")
     def save_review(rid):
-        run = get_run(rid)
-        errors, forms = run.save_review(request.form)
+        run, ph = get_run(rid), pharmacist()
+        if not ph:            # only a verified pharmacist can put an unsure reading on the card
+            return need_login(rid)
+        errors, forms = run.save_review(request.form, pharmacist=ph)
         if errors:
-            return review_page(run, f"/r/{rid}", lang_arg(), errors, forms), 400
+            return review_page(run, f"/r/{rid}", lang_arg(), errors, forms, pharmacist=ph), 400
         return redirect(f"/r/{rid}/card?lang={lang_arg()}")
 
     @app.post("/r/<rid>/undo/<path:iid>")
     def undo(rid, iid):
-        get_run(rid).undo(iid)
+        run, ph = get_run(rid), pharmacist()
+        if not ph:
+            return need_login(rid)
+        run.undo(iid)
         return redirect(f"/r/{rid}/review")
 
     @app.get("/r/<rid>/audio/<name>")
@@ -278,6 +358,52 @@ def save_upload(f, folder: Path, n: int, room: int) -> list[str]:
     with Image.open(path) as im:
         im.verify()
     return [str(path)]
+
+
+def _pharmacist_shell(title: str, inner: str) -> str:
+    return page(title, f"<div class='auth'>{inner}</div>", "en", topbar("en", lambda c: f"/?lang={c}"))
+
+
+def login_page(nxt: str = "", error: str = "") -> str:
+    esc = html.escape
+    err = f"<div class='notice' role='alert'>{icon('alert')}<div>{esc(error)}</div></div>" if error else ""
+    return _pharmacist_shell("Pharmacist sign in", f"""
+<h1>Pharmacist sign in</h1>
+<p class="lede">Only verified pharmacists can confirm medicines. Sign in with your State Pharmacy Council
+registration number.</p>{err}
+<form method="post" action="/pharmacist/login" class="stack">
+  <input type="hidden" name="next" value="{esc(nxt)}">
+  <label class="field">Registration number <input name="reg_no" required autocomplete="username"></label>
+  <label class="field">Password <input name="password" type="password" required autocomplete="current-password"></label>
+  <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+</form>
+<p class="small">New here? <a href="/pharmacist/apply">Apply with your registration certificate</a></p>""")
+
+
+def apply_page(form=None, errors=(), done: bool = False) -> str:
+    esc = html.escape
+    form = form or {}
+    if done:
+        return _pharmacist_shell("Application received", """
+<h1>Application received</h1>
+<p class="lede">We are checking your registration certificate against the Pharmacy Council register.
+You can sign in once it is approved.</p><a class="btn btn-outline" href="/">Back to Strip Reader</a>""")
+    err = "".join(f"<div class='err'>{esc(e)}</div>" for e in errors)
+    v = lambda k: esc(form.get(k, ""))
+    return _pharmacist_shell("Pharmacist application", f"""
+<h1>Apply as a pharmacist</h1>
+<p class="lede">Upload your State Pharmacy Council Registration Certificate. It is read automatically, then
+checked by a person against the council register before your account works.</p>{err}
+<form method="post" action="/pharmacist/apply" enctype="multipart/form-data" class="stack">
+  <label class="field">Full name (as on the certificate) <input name="name" value="{v('name')}" required></label>
+  <label class="field">Registration number <input name="reg_no" value="{v('reg_no')}" required></label>
+  <label class="field">Pharmacy Council <input name="council" value="{v('council')}" placeholder="e.g. Odisha State Pharmacy Council" required></label>
+  <label class="field">Registration certificate (photo or PDF)
+    <input name="certificate" type="file" accept="image/*,.heic,.pdf,application/pdf" required></label>
+  <label class="field">Choose a password (8+ characters) <input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
+  <button class="btn btn-primary btn-block" type="submit">Send application</button>
+</form>
+<p class="small">Already approved? <a href="/pharmacist/login">Sign in</a></p>""")
 
 
 def history_page(lang: str, runs: list[dict]) -> str:

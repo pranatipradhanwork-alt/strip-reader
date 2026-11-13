@@ -67,7 +67,7 @@ def build_schedule(result: dict, confirmations: dict | None = None, uses_fn=None
                 t = parse_timing(c["timing_text"])
                 entry = {"id": iid, "name": c["name"], "strength": c["strength"],
                          "crop": i.get("crop_path"), "timing": t.to_dict(),
-                         "confirmed_by": c["by"], "confirmed_at": c["at"],
+                         "confirmed_by": c["by"], "confirmed_at": c["at"], "confirmed_reg": c.get("reg_no"),
                          "uses": uses(_trusted_generic(c["name"]))}
                 _place(sched, entry, t)
                 continue
@@ -272,7 +272,11 @@ def _med_html(e: dict, L: dict, img) -> str:
     if e.get("amount"):
         a = {0.5: "½", 0.25: "¼"}.get(e["amount"], f"{e['amount']:g}")
         amt = f"<span class='amt' title='amount'>{a}</span>"
-    tick = (f" <span class='tick'>{icon('check', 16)}{esc(L['pharmacist'])}</span>" if e.get("confirmed_by") else "")
+    tick = ""
+    if e.get("confirmed_by"):
+        who = (L["checked_by"].format(name=e["confirmed_by"], reg=e["confirmed_reg"]) if e.get("confirmed_reg")
+               else L["pharmacist"])
+        tick = f" <span class='tick'>{icon('check', 16)}{esc(who)}</span>"
     chips = []
     if t.get("reason"):
         chips.append(t["reason"])

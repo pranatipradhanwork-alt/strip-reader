@@ -5,6 +5,17 @@ import pytest
 from PIL import Image
 
 from strip_reader.app import FIX, create_app
+from strip_reader.pharmacists import Registry
+
+CERT_OK = {"is_pharmacist_registration_certificate": True, "name": "Asha Sahoo", "registration_number": "OR-12345",
+           "council": "Odisha State Pharmacy Council", "valid_until": "2099-12-31"}
+
+
+def approved_registry(folder):
+    reg = Registry(folder, reader=lambda path: CERT_OK)
+    assert reg.apply("Asha Sahoo", "or-12345", "Odisha State Pharmacy Council", "s3cret-pass", "cert.pdf", b"%PDF-") == []
+    reg.set_status("OR-12345", "approved", by="Admin")
+    return reg
 
 
 def fake_reader(images, run_dir, mock=None):
@@ -17,7 +28,8 @@ def fake_reader(images, run_dir, mock=None):
 def client(tmp_path, monkeypatch):
     from strip_reader import cli
     monkeypatch.setattr(cli, "CACHE", tmp_path / "cache")
-    app = create_app(tmp_path / "runs", reader=fake_reader, uses_fn=None, speak_fn=None)
+    app = create_app(tmp_path / "runs", reader=fake_reader, uses_fn=None, speak_fn=None,
+                     registry=approved_registry(tmp_path / "instance"))
     return app.test_client()
 
 
@@ -64,13 +76,22 @@ def test_no_photo_or_bad_file_is_refused(client):
 def test_review_and_card_links_work(client):
     loc = client.post("/sample", data={"lang": "en"}).headers["Location"]
     base = loc.split("/card")[0]
+    # Not signed in: the check page and saving both send you to the sign-in page.
+    assert "/pharmacist/login" in client.get(f"{base}/review").headers["Location"]
+    good = {"sample_prescription.png-item6|action": "confirm", "sample_prescription.png-item6|name": "Glimepiride",
+            "sample_prescription.png-item6|strength": "1 mg", "sample_prescription.png-item6|timing_text": "1-0-0",
+            "by": "Anyone at all"}
+    assert "/pharmacist/login" in client.post(f"{base}/review", data=good).headers["Location"]
+    assert "Glimepiride" not in client.get(f"{base}/card?lang=en").data.decode().split("Ask your pharmacist")[0]
+
+    client.post("/pharmacist/login", data={"reg_no": "OR-12345", "password": "s3cret-pass"})
     review = client.get(f"{base}/review").data.decode()
-    assert "Pharmacist check" in review and "Glimpride" in review   # the unsure handwritten item
-    bad = client.post(f"{base}/review", data={"by": "P", f"sample_prescription.png-item6|action": "confirm",
-                                              f"sample_prescription.png-item6|name": "Glimepiride",
-                                              f"sample_prescription.png-item6|strength": "1",
-                                              f"sample_prescription.png-item6|timing_text": "1-0-0"})
+    assert "Pharmacist check" in review and "Glimpride" in review and "Signed in as" in review
+    bad = client.post(f"{base}/review", data={**good, "sample_prescription.png-item6|strength": "1"})
     assert bad.status_code == 400
+    assert client.post(f"{base}/review", data=good).status_code == 302
+    card = client.get(f"{base}/card?lang=en").data.decode()
+    assert "Checked by pharmacist Asha Sahoo (Reg. OR-12345)" in card and "Anyone at all" not in card
 
 
 def test_unknown_run_is_404(client):

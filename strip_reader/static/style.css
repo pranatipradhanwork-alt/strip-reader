@@ -355,3 +355,18 @@ details { font-size: 13px; color: var(--muted); margin-top: 8px; }
   .topbar, .tabbar, .toolbar, .listen, details { display: none !important; }
   .slot { break-inside: avoid; box-shadow: none; }
 }
+
+/* Pharmacist sign in / apply */
+.auth { max-width: 440px; margin: 40px auto 64px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 20px; padding: 28px; }
+.auth h1 { font-size: 26px; margin: 0 0 8px; color: var(--heading); }
+.auth .lede { color: var(--ink-2); font-size: 16px; margin: 0 0 18px; }
+.auth .field { display: flex; flex-direction: column; gap: 6px; font-size: 15px; font-weight: 600; color: var(--ink-2); }
+.auth input { font: inherit; font-weight: 400; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line-2);
+  background: var(--surface-2); color: var(--ink); }
+.auth .small { font-size: 15px; color: var(--muted); margin: 18px 0 0; }
+.auth .small a { color: var(--accent-text); }
+.auth .err { color: #c0262d; font-size: 15px; margin: 0 0 8px; }
+.signed-in { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 15px; color: var(--ink-2);
+  background: var(--surface-2); border-radius: 12px; padding: 10px 14px; }
+.signed-in .btn { margin-left: auto; }
