@@ -447,3 +447,25 @@ a.reply-notice { text-decoration: none; color: inherit; border: 1px solid var(--
 .pw-rules li.ok::before { content: "✓"; font-weight: 700; }
 .pw-rules li.bad { color: #c0262d; }
 .pw-rules li.bad::before { content: "✕"; }
+
+/* Dark theme: filled buttons are translucent glass, not a solid cyan-indigo block. */
+html[data-theme="dark"] {
+  --glass: linear-gradient(90deg, rgba(34, 211, 238, .16), rgba(99, 102, 241, .20));
+  --glass-hover: linear-gradient(90deg, rgba(34, 211, 238, .24), rgba(99, 102, 241, .30));
+  --glass-line: rgba(129, 140, 248, .45);
+  --glass-ink: #e6f6ff;
+  --btn-glow: 0 0 18px rgba(99, 102, 241, .18);
+}
+html[data-theme="dark"] .btn-primary, html[data-theme="dark"] .btn-dark,
+html[data-theme="dark"] .upload label[for="photos"]:hover, html[data-theme="dark"] .choice.primary,
+html[data-theme="dark"] .choice:hover, html[data-theme="dark"] .choice:focus-visible {
+  background: var(--glass); color: var(--glass-ink); border: 1px solid var(--glass-line);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+html[data-theme="dark"] .btn-primary:hover, html[data-theme="dark"] .btn-dark:hover { background: var(--glass-hover); filter: none; }
+html[data-theme="dark"] .choice.primary .choice-icon, html[data-theme="dark"] .choice:hover .choice-icon {
+  background: rgba(255, 255, 255, .08); color: var(--accent-text); }
+html[data-theme="dark"] .choices-big:hover .choice.primary:not(:hover) { background: var(--surface); border-color: var(--line); color: var(--ink); }
+html[data-theme="dark"] .welcome-mark, html[data-theme="dark"] .brand-mark { background: var(--glass); color: var(--accent-text);
+  border: 1px solid var(--glass-line); }
+html[data-theme="dark"] .msg.mine { background: var(--glass); color: var(--glass-ink); border: 1px solid var(--glass-line); }
+html[data-theme="dark"] .pop-tile { background: var(--glass); border: 1px solid var(--glass-line); }
