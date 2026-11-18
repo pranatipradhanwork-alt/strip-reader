@@ -248,6 +248,7 @@ strip_reader/
   confirm.py     pharmacist confirmation rules
   pharmacists.py verified pharmacist accounts (apply, AI certificate check, approve, sign in)
   chat.py        ask a pharmacist: message thread per reading, pharmacist inbox
+  monitor.py     health check, usage log (counts only), admin stats
   voice.py       card -> spoken script -> MP3
   app.py         web app: camera/upload -> card, read aloud, pharmacist check, history (Flask)
   icons.py       inline line icons
@@ -258,8 +259,8 @@ data/
   medicines.csv  generics and brands
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
-scripts/         build_leaflets.py, build_index.py
-tests/           121 tests, no API key needed
+scripts/         build_leaflets.py, build_index.py, smoke_test.py
+tests/           129 tests, no API key needed
 ```
 
 ## Testing
@@ -269,6 +270,25 @@ pytest -q
 ```
 
 All tests run offline with saved model replies, and they run on every push and pull request (GitHub Actions).
+
+**Smoke test (a running app, local or deployed):** walks a patient's journey and prints pass/fail with timings.
+
+```bash
+python scripts/smoke_test.py http://localhost:5050
+python scripts/smoke_test.py https://<deployed-address> --photo strip.jpg   # also one real reading (uses AI quota)
+```
+
+It checks the health endpoint, the welcome screen, the sample prescription card, history, and that the pharmacist pages are locked.
+
+**Why not an LLM eval tool such as promptfoo?** What keeps patients safe (no invented doses, handwriting always to a pharmacist, strength rules) is deterministic code covered by the unit tests, and the model's reading is scored on labelled photos (see Results). With 20 free AI requests a day and private test photos, a prompt-regression suite is planned for when a larger labelled set exists.
+
+## Monitoring
+
+| What | Where |
+|---|---|
+| Health | `GET /healthz`: `ok` / `degraded` / `down`, with checks for the AI key, the offline reader, the medicine list and storage. No AI call, so platforms can poll it. |
+| Usage log | One line per reading (log + `instance/metrics.jsonl`): time taken, number of photos, path per photo (AI, offline reader, saved for later, not a medicine), items on the card vs. sent to a pharmacist, and failures by error type. Also chat messages, sign-ins, server errors. **No medicine names, photos or typed text are ever logged.** |
+| Dashboard | `/admin/stats` (and `/admin/stats.json`): today's totals and the median / 90th-percentile time of real photo readings. Off unless `ADMIN_TOKEN` is set; then password-protected. |
 
 ## Limitations
 

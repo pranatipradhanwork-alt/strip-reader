@@ -505,3 +505,11 @@ html:not([data-theme="dark"]) .splash-mark { background: linear-gradient(135deg,
   box-shadow: 0 18px 40px rgba(232, 51, 90, .28); }
 html:not([data-theme="dark"]) .splash-name { color: #1c1c1e; }
 html:not([data-theme="dark"]) .splash-caption { color: #d42a50; }
+
+/* Admin dashboard */
+.stats { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  overflow: hidden; font-size: 16px; }
+.stats th, .stats td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.stats th { font-weight: 500; color: var(--ink-2); }
+.stats td { font-weight: 700; text-align: right; color: var(--ink); }
+.stats tr:last-child th, .stats tr:last-child td { border-bottom: 0; }

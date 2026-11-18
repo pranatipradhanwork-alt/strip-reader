@@ -64,9 +64,9 @@ class Registry:
     `reader` reads a certificate file into a dict (default: Gemini); tests pass a fake one.
     """
 
-    def __init__(self, folder: str | Path = DEFAULT_DIR, reader=None):
+    def __init__(self, folder: str | Path | None = None, reader=None):
         self.reader = reader or read_certificate
-        self.dir = Path(folder)
+        self.dir = Path(folder if folder is not None else DEFAULT_DIR)
         self.file = self.dir / "pharmacists.json"
         self.certs = self.dir / "pharmacist_certs"
 
