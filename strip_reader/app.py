@@ -10,6 +10,8 @@ Flow:  home (take/choose photos, pick language)  ->  reading  ->  medicine card
 from __future__ import annotations
 
 import argparse
+import hmac
+import os
 import html
 import json
 import re
@@ -27,6 +29,7 @@ from .leaflets import what_its_for
 from .voice import speak
 from .icons import icon
 from .pharmacists import Registry
+from .monitor import Monitor, health
 from . import chat
 from .web import Run, card_page, history_link, page, review_page, tabbar, topbar
 
@@ -73,6 +76,8 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
     app.config.update(SECRET_KEY=secret_key(registry.dir), SESSION_COOKIE_HTTPONLY=True,
                       SESSION_COOKIE_SAMESITE="Lax", PERMANENT_SESSION_LIFETIME=12 * 3600)
     failed: dict[str, list[float]] = {}
+    monitor = Monitor(registry.dir)
+    app.config["MONITOR"] = monitor
 
     def pharmacist() -> dict | None:
         """The logged-in pharmacist, re-read every time so a disabled account stops at once."""
@@ -81,6 +86,50 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
 
     def need_login(rid: str):
         return redirect(f"/pharmacist/login?next=/r/{rid}/review%3Flang={lang_arg()}")
+
+    # ---------- Monitoring ----------
+
+    @app.get("/healthz")
+    def healthz():
+        h = health(ROOT / "data" / "medicines.csv", base_dir)
+        return jsonify(h), (503 if h["status"] == "down" else 200)
+
+    def admin_ok() -> bool:
+        return bool(session.get("admin")) and bool(os.getenv("ADMIN_TOKEN"))
+
+    @app.get("/admin/stats")
+    def admin_stats():
+        if not os.getenv("ADMIN_TOKEN"):
+            abort(404)                       # dashboard is off unless an admin password is set
+        if not admin_ok():
+            return admin_login_page()
+        day = request.args.get("day") or None
+        if day and not re.match(r"^\d{4}-\d{2}-\d{2}$", day):
+            abort(400)
+        return admin_stats_page(monitor.stats(day))
+
+    @app.post("/admin/stats")
+    def admin_login():
+        token = os.getenv("ADMIN_TOKEN")
+        if not token:
+            abort(404)
+        if hmac.compare_digest(request.form.get("token", ""), token):
+            session["admin"] = True
+            return redirect("/admin/stats")
+        monitor.event("admin_sign_in_failed")
+        return admin_login_page("Wrong admin password."), 401
+
+    @app.get("/admin/stats.json")
+    def admin_stats_json():
+        if not admin_ok():
+            abort(404)
+        return jsonify(monitor.stats(request.args.get("day") or None))
+
+    @app.errorhandler(500)
+    def server_error(e):
+        monitor.event("server_error", error=type(getattr(e, "original_exception", e)).__name__)
+        return page("Something went wrong", "<div class='auth'><h1>Something went wrong</h1><p class='lede'>Please try "
+                    "again. If you feel unwell, call 108.</p><a class='btn btn-primary' href='/'>Back</a></div>"), 500
 
     @app.get("/pharmacist/login")
     def login_form():
@@ -95,12 +144,14 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
             return login_page(nxt, "Too many wrong tries. Please wait 10 minutes."), 429
         rec, problem = registry.check(request.form.get("reg_no", ""), request.form.get("password", ""))
         if not rec:
+            monitor.event("sign_in_failed")
             if problem == "wrong":
                 failed[ip] = tries + [now]
             msg = ("Your application is still being verified. You can sign in once it is approved."
                    if problem == "pending" else "Registration number or password is wrong.")
             return login_page(nxt, msg), 401
         failed.pop(ip, None)
+        monitor.event("sign_in")
         session.clear()
         session.permanent = True
         session["pharmacist"] = rec["reg_no"]
@@ -155,8 +206,14 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
         resp.set_cookie(COOKIE, ",".join(runs[:MAX_HISTORY]), max_age=365 * 24 * 3600, samesite="Lax", httponly=True)
         return resp
 
-    def finish(rid: str, d: Path, images: list[str], mock: str | None = None):
-        result = reader(images, d, mock)
+    def finish(rid: str, d: Path, images: list[str], mock: str | None = None, kind: str = "upload"):
+        t0 = time.time()
+        try:
+            result = reader(images, d, mock)
+        except Exception as e:
+            monitor.reading(kind, time.time() - t0, error=type(e).__name__)
+            raise
+        monitor.reading(kind, time.time() - t0, result)
         (d / "result.json").write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
         runs = [rid] + [r for r in my_runs() if r != rid]
         return with_runs(redirect(f"/r/{rid}/card?lang={lang_arg()}"), runs)
@@ -224,7 +281,7 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
         rid, d = new_run()
         photo = d / "photos" / "sample_prescription.png"
         photo.write_bytes((FIX / "printed_rx.png").read_bytes())
-        return finish(rid, d, [str(photo)], mock=str(FIX / "printed_rx_reply.json"))
+        return finish(rid, d, [str(photo)], mock=str(FIX / "printed_rx_reply.json"), kind="sample")
 
     @app.get("/r/<rid>/card")
     def card(rid):
@@ -265,6 +322,7 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
         problem = chat.add(base_dir / rid, viewer, request.form.get("text", ""), ph)
         if problem:
             return chat_page(rid, problem), 400
+        monitor.event("chat_message", sender=viewer)
         return redirect(f"/r/{rid}/chat?lang={lang_arg() if viewer == 'patient' else 'en'}")
 
     @app.get("/r/<rid>/chat/messages")
@@ -288,7 +346,7 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
         """Gemini was busy or offline: read the saved photos again."""
         run = get_run(rid)
         photos = sorted(str(f) for f in (run.dir / "photos").iterdir() if f.is_file())
-        return finish(rid, run.dir, photos)
+        return finish(rid, run.dir, photos, kind="retry")
 
     @app.get("/r/<rid>/review")
     def review(rid):
@@ -436,6 +494,34 @@ def save_upload(f, folder: Path, n: int, room: int) -> list[str]:
     with Image.open(path) as im:
         im.verify()
     return [str(path)]
+
+
+def admin_login_page(error: str = "") -> str:
+    esc = html.escape
+    err = f"<div class='notice' role='alert'>{icon('alert')}<div>{esc(error)}</div></div>" if error else ""
+    return _pharmacist_shell("Admin", f"""<h1>Admin</h1><p class="lede">Usage and health of this app.</p>{err}
+<form method="post" action="/admin/stats" class="stack">
+  <label class="field">Admin password <input name="token" type="password" required autocomplete="current-password"></label>
+  <button class="btn btn-primary btn-block" type="submit">Open dashboard</button></form>""")
+
+
+def admin_stats_page(st: dict) -> str:
+    esc = html.escape
+    row = lambda k, v: f"<tr><th>{esc(k)}</th><td>{esc(str(v))}</td></tr>"
+    paths = st["paths"]
+    rows = "".join([
+        row("Readings", st["readings"]), row("of which the built-in sample", st["samples"]), row("Photos", st["photos"]),
+        row("Time per real photo reading (median)", f"{st['seconds_median']} s" if st["seconds_median"] is not None else "-"),
+        row("Time per real photo reading (90% under)", f"{st['seconds_p90']} s" if st["seconds_p90"] is not None else "-"),
+        row("Read by AI", paths["ai"]), row("Read offline (AI unavailable)", paths["offline"]),
+        row("Saved for later", paths["saved"]), row("Not a medicine photo", paths["not_medicine"]),
+        row("Items put on the card", st["on_card"]), row("Items sent to a pharmacist", st["to_pharmacist"]),
+        row("Readings that failed", st["reading_errors"]),
+    ] + [row(k.replace("_", " ").capitalize(), v) for k, v in sorted(st["events"].items())])
+    return page("Admin", f"""<div class='chat-page'><header class='page-head'><p class='kicker'>Admin</p>
+<h1>Today at a glance</h1><p class='meta'>{esc(st['day'])} (UTC) · counts only, no medical details are recorded ·
+<a href='/admin/stats.json'>JSON</a></p></header><table class='stats'>{rows}</table></div>""", "en",
+                topbar("en", lambda c: "/admin/stats"))
 
 
 def welcome_page(lang: str) -> str:
