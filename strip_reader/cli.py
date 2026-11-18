@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -19,8 +20,8 @@ from .card import LANGS, build_schedule, card_html, card_text
 from .vision import PROMPT_VERSION, PROFILES, OfflineError, crop, load_image, quick_check, read_image
 
 ROOT = Path(__file__).resolve().parent.parent
-CACHE = ROOT / "out" / "cache"   # Gemini replies by photo content: a photo is never sent twice
-QUEUE = ROOT / "out" / "queue"   # photos taken while offline, read later with --flush-queue
+CACHE = Path(os.getenv("STRIP_READER_CACHE") or ROOT / "out" / "cache")   # Gemini replies by photo content: never sent twice
+QUEUE = Path(os.getenv("STRIP_READER_QUEUE") or ROOT / "out" / "queue")   # photos taken while offline, read later
 
 
 def photo_key(path: str | Path, profile: str) -> str:
@@ -28,7 +29,9 @@ def photo_key(path: str | Path, profile: str) -> str:
 
 
 def run(images: list[str], out_dir: Path, mock: str | None = None, model: str | None = None,
-        profile: str = "normal", budget_s: float | None = None, use_offline: bool = True) -> dict:
+        profile: str = "normal", budget_s: float | None = None, use_offline: bool | None = None) -> dict:
+    if use_offline is None:   # OFFLINE_OCR=0 on small servers: the offline reader needs about 400 MB of memory
+        use_offline = os.getenv("OFFLINE_OCR", "1") != "0"
     medicines = load_medicines(ROOT / "data" / "medicines.csv")
     all_items, per_image, offline = [], [], False
     for path in images:

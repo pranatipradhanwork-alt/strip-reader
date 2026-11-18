@@ -57,3 +57,23 @@ def test_wsgi_entry_point(monkeypatch, tmp_path):
     monkeypatch.setattr("strip_reader.app.load_dotenv", lambda *a, **k: None)   # never read the real .env in tests
     from strip_reader.app import wsgi
     assert wsgi().test_client().get("/healthz").status_code in (200, 503)
+
+
+def test_offline_reader_can_be_switched_off(tmp_path, monkeypatch):
+    from strip_reader import cli
+    from strip_reader.monitor import health
+    monkeypatch.setattr(cli, "CACHE", tmp_path / "cache")
+    monkeypatch.setattr(cli, "QUEUE", tmp_path / "queue")
+    monkeypatch.setenv("OFFLINE_OCR", "0")
+    called = []
+    monkeypatch.setattr(cli, "offline_read", lambda *a, **k: called.append(1) or {"items": []})
+    def down(*a, **k):
+        raise cli.OfflineError("down")
+    monkeypatch.setattr(cli, "read_image", down)
+    img = tmp_path / "p.png"
+    Image.new("RGB", (40, 40), "white").save(img)
+    result = cli.run([str(img)], tmp_path / "out")
+    assert not called and result["images"][0].get("queued")        # saved for later, OCR never loaded
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    h = health(tmp_path / "missing.csv", tmp_path)
+    assert h["checks"]["offline_reader"] == "off"

@@ -1,4 +1,4 @@
-# Strip Reader on Hugging Face Spaces (Docker, free CPU hardware) or any container host.
+# Strip Reader in a container: Render (render.yaml), Hugging Face Spaces, or any Docker host.
 FROM python:3.13-slim
 
 # OpenCV (used by the offline text reader) needs these system libraries.

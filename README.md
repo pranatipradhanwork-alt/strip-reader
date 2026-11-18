@@ -260,9 +260,10 @@ data/
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py, smoke_test.py
-deploy/          push_space.sh (Hugging Face Space upload), space_header.md
+deploy/          live-demo.sh (Mac + ngrok), push_space.sh (Hugging Face), space_header.md
+render.yaml      Render Blueprint (free plan)
 Dockerfile       container for Spaces or any host
-tests/           133 tests, no API key needed
+tests/           134 tests, no API key needed
 ```
 
 ## Testing
@@ -294,24 +295,29 @@ It checks the health endpoint, the welcome screen, the sample prescription card,
 
 ## Deployment
 
-Runs as a Docker container (`Dockerfile`) on **Hugging Face Spaces, free CPU hardware**: the AI runs at Google and the offline reader needs no GPU.
+Two ways, same code and the same production settings (gunicorn server, 10 photo readings per visitor per day, readings and photos deleted after 24 hours, `/healthz` health check).
 
-| Setting | Value in the container | Why |
-|---|---|---|
-| `DAILY_LIMIT` | 10 photo readings per visitor per day | a public link must not use up the AI quota (the sample is never limited) |
-| `RETENTION_HOURS` | 24 | readings, photos and cached replies are deleted after a day |
-| `BEHIND_PROXY` | 1 | the visitor's real address, for the daily limit |
-| Server | gunicorn, 1 worker, 8 threads, 120 s timeout | production server; one AI reading can take up to a minute |
-| Health | `/healthz` (also the container's HEALTHCHECK) | the platform restarts a broken app |
+**1. Render (always on, free).** `render.yaml` is a Render Blueprint: *New → Blueprint →* this repo, then paste the secrets it asks for (`GEMINI_API_KEY`, `ADMIN_TOKEN`, `DEMO_PHARMACIST`; `SECRET_KEY` is generated). Every merge to `main` redeploys. The free plan has 512 MB of memory and the offline reader needs about 400 MB, so it is switched off there (`OFFLINE_OCR=0`): when the AI is unavailable the photo is saved and the person taps *Try again*. The free plan sleeps after 15 minutes idle (the next visit takes about a minute) and readings reset on restart.
 
-Secrets go in the Space settings, never in the code: `GEMINI_API_KEY`, `SECRET_KEY`, `ADMIN_TOKEN` (dashboard), and `DEMO_PHARMACIST` (`REG|Name|Council|password`, an approved demo account clearly marked as a demo).
+**2. Live demo from a Mac (one command).** Starts the app in production mode with everything on, including the offline reader, and opens a public https link with ngrok:
 
 ```bash
-./deploy/push_space.sh                                   # upload the committed code to the Space
-python scripts/smoke_test.py https://pranatipradhan123-strip-reader.hf.space
+./deploy/live-demo.sh          # Ctrl+C stops the app and the link
 ```
 
-On the free plan the app sleeps after 48 hours without visitors (the next visit takes about a minute to wake it), and accounts, chats and readings reset when it restarts: fine for a demo, and nothing medical is kept.
+Demo data stays in `out/demo`, apart from your own readings.
+
+| Setting | Meaning |
+|---|---|
+| `DAILY_LIMIT` | photo readings per visitor per day (the built-in sample is never limited) |
+| `RETENTION_HOURS` | delete readings, photos and cached replies older than this |
+| `OFFLINE_OCR` | `0` switches the offline reader off on small servers |
+| `BEHIND_PROXY` | `1` behind a platform proxy, for the visitor's real address |
+| `DEMO_PHARMACIST` | `REG\|Name\|Council\|password`: an approved demo account, clearly marked as a demo |
+
+Secrets live in the host's settings, never in the code. Check any deployment with `python scripts/smoke_test.py <address>`.
+
+Hugging Face Spaces was the first choice (16 GB of memory), but Docker Spaces now need a paid plan; `deploy/push_space.sh` is kept for that case.
 
 ## Limitations
 
