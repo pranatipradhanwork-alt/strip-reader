@@ -260,7 +260,9 @@ data/
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py, smoke_test.py
-tests/           129 tests, no API key needed
+deploy/          push_space.sh (Hugging Face Space upload), space_header.md
+Dockerfile       container for Spaces or any host
+tests/           133 tests, no API key needed
 ```
 
 ## Testing
@@ -289,6 +291,27 @@ It checks the health endpoint, the welcome screen, the sample prescription card,
 | Health | `GET /healthz`: `ok` / `degraded` / `down`, with checks for the AI key, the offline reader, the medicine list and storage. No AI call, so platforms can poll it. |
 | Usage log | One line per reading (log + `instance/metrics.jsonl`): time taken, number of photos, path per photo (AI, offline reader, saved for later, not a medicine), items on the card vs. sent to a pharmacist, and failures by error type. Also chat messages, sign-ins, server errors. **No medicine names, photos or typed text are ever logged.** |
 | Dashboard | `/admin/stats` (and `/admin/stats.json`): today's totals and the median / 90th-percentile time of real photo readings. Off unless `ADMIN_TOKEN` is set; then password-protected. |
+
+## Deployment
+
+Runs as a Docker container (`Dockerfile`) on **Hugging Face Spaces, free CPU hardware**: the AI runs at Google and the offline reader needs no GPU.
+
+| Setting | Value in the container | Why |
+|---|---|---|
+| `DAILY_LIMIT` | 10 photo readings per visitor per day | a public link must not use up the AI quota (the sample is never limited) |
+| `RETENTION_HOURS` | 24 | readings, photos and cached replies are deleted after a day |
+| `BEHIND_PROXY` | 1 | the visitor's real address, for the daily limit |
+| Server | gunicorn, 1 worker, 8 threads, 120 s timeout | production server; one AI reading can take up to a minute |
+| Health | `/healthz` (also the container's HEALTHCHECK) | the platform restarts a broken app |
+
+Secrets go in the Space settings, never in the code: `GEMINI_API_KEY`, `SECRET_KEY`, `ADMIN_TOKEN` (dashboard), and `DEMO_PHARMACIST` (`REG|Name|Council|password`, an approved demo account clearly marked as a demo).
+
+```bash
+./deploy/push_space.sh                                   # upload the committed code to the Space
+python scripts/smoke_test.py https://pranatipradhan123-strip-reader.hf.space
+```
+
+On the free plan the app sleeps after 48 hours without visitors (the next visit takes about a minute to wake it), and accounts, chats and readings reset when it restarts: fine for a demo, and nothing medical is kept.
 
 ## Limitations
 
