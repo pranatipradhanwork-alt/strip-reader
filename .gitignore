@@ -7,3 +7,5 @@ samples/*
 !samples/.gitkeep
 .claude/
 instance/
+deploy/space-secrets.txt
+deploy/render-secrets.txt

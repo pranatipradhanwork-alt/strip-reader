@@ -1,0 +1,22 @@
+# Render Blueprint: New -> Blueprint -> pick this repo. Render asks for the values marked sync: false.
+services:
+  - type: web
+    name: strip-reader
+    runtime: docker
+    plan: free
+    region: singapore          # closest free region to India
+    dockerfilePath: ./Dockerfile
+    branch: main
+    autoDeploy: true           # every merge to main redeploys
+    healthCheckPath: /healthz
+    envVars:
+      - key: GEMINI_API_KEY    # from Google AI Studio (the same key as in your .env)
+        sync: false
+      - key: ADMIN_TOKEN       # password for /admin/stats
+        sync: false
+      - key: DEMO_PHARMACIST   # REG|Name|Council|password, an approved demo account
+        sync: false
+      - key: SECRET_KEY        # signs sign-in cookies; Render makes a random one
+        generateValue: true
+      - key: OFFLINE_OCR       # the offline reader needs ~400 MB; the free plan has 512 MB
+        value: "0"

@@ -125,6 +125,24 @@ class Registry:
         self._save(data)
         return rec
 
+    def ensure_demo(self, spec: str) -> None:
+        """Approved demo account from a secret setting "REG|Name|Council|password" (for showing the app).
+
+        No certificate: it is marked as a demo account, never a verified pharmacist.
+        """
+        try:
+            reg, name, council, password = (x.strip() for x in spec.split("|", 3))
+        except ValueError:
+            return
+        data = self.load()
+        key = norm_reg(reg)
+        if key in data:
+            return
+        data[key] = {"name": name, "reg_no": key, "council": council, "pw_hash": generate_password_hash(password),
+                     "certificate": "", "status": "approved", "applied_at": _now(), "verified_by": "demo account",
+                     "verified_at": _now(), "ai_check": {"verdict": "demo", "problems": [], "at": _now()}}
+        self._save(data)
+
     def set_status(self, reg_no: str, status: str, by: str = "") -> dict:
         data = self.load()
         rec = data.get(norm_reg(reg_no))

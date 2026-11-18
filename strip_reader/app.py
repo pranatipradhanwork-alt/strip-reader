@@ -54,6 +54,26 @@ def default_reader(images: list[str], run_dir: Path, mock: str | None = None) ->
 LOGIN_TRIES, LOGIN_WINDOW_S = 5, 600   # 5 wrong passwords in 10 minutes -> wait
 
 
+def remove_older_than(hours: float, folders: list[Path]) -> int:
+    """Delete readings (folders) and cached files older than `hours`. Returns how many were removed."""
+    cutoff, n = time.time() - hours * 3600, 0
+    for folder in folders:
+        if not Path(folder).exists():
+            continue
+        for item in Path(folder).iterdir():
+            try:
+                if item.stat().st_mtime >= cutoff:
+                    continue
+                if item.is_dir():
+                    shutil.rmtree(item, ignore_errors=True)
+                else:
+                    item.unlink()
+                n += 1
+            except OSError:
+                pass
+    return n
+
+
 def secret_key(folder: Path) -> str:
     """Signs the pharmacist's login cookie. From SECRET_KEY, else made once and kept in instance/."""
     import os
@@ -67,17 +87,58 @@ def secret_key(folder: Path) -> str:
     return f.read_text().strip()
 
 
-def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reader,
+def create_app(base_dir: str | Path | None = None, reader=default_reader,
                uses_fn=what_its_for, speak_fn=speak, registry: Registry | None = None) -> Flask:
-    base_dir = Path(base_dir)
+    """The web app. Settings for a public server come from the environment:
+
+    STRIP_READER_RUNS  folder for readings (default out/app)
+    RETENTION_HOURS    delete readings, photos and cached replies older than this (0 = keep)
+    DAILY_LIMIT        photo readings per visitor per day (0 = no limit)
+    BEHIND_PROXY=1     trust the hosting platform's X-Forwarded-For (for the visitor's address)
+    DEMO_PHARMACIST    "REG|Name|Council|password": an approved demo account made at start
+    """
+    base_dir = Path(base_dir or os.getenv("STRIP_READER_RUNS") or ROOT / "out" / "app")
     registry = registry or Registry()
+    if os.getenv("DEMO_PHARMACIST"):
+        registry.ensure_demo(os.environ["DEMO_PHARMACIST"])
+    retention_h = float(os.getenv("RETENTION_HOURS") or 0)
+    daily_limit = int(os.getenv("DAILY_LIMIT") or 0)
     app = Flask(__name__)
+    if os.getenv("BEHIND_PROXY") == "1":
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     app.config["MAX_CONTENT_LENGTH"] = MAX_PHOTOS * 15 * 1024 * 1024
     app.config.update(SECRET_KEY=secret_key(registry.dir), SESSION_COOKIE_HTTPONLY=True,
                       SESSION_COOKIE_SAMESITE="Lax", PERMANENT_SESSION_LIFETIME=12 * 3600)
     failed: dict[str, list[float]] = {}
     monitor = Monitor(registry.dir)
     app.config["MONITOR"] = monitor
+    used_today: dict[tuple[str, str], int] = {}     # (day, visitor address) -> photo readings
+    last_cleanup = [0.0]
+
+    def over_limit() -> bool:
+        """Photo readings use the AI quota: a fair share per visitor per day."""
+        if not daily_limit:
+            return False
+        key = (time.strftime("%Y-%m-%d"), request.remote_addr or "?")
+        if used_today.get(key, 0) >= daily_limit:
+            monitor.event("daily_limit_reached")
+            return True
+        for k in [k for k in used_today if k[0] != key[0]]:
+            used_today.pop(k)                        # forget earlier days
+        used_today[key] = used_today.get(key, 0) + 1
+        return False
+
+    @app.before_request
+    def cleanup():
+        """Medical photos are not kept: remove anything older than RETENTION_HOURS (checked every 10 min)."""
+        if not retention_h or time.time() - last_cleanup[0] < 600:
+            return
+        last_cleanup[0] = time.time()
+        from . import cli
+        removed = remove_older_than(retention_h, [base_dir, cli.CACHE, cli.QUEUE])
+        if removed:
+            monitor.event("old_data_removed", items=removed)
 
     def pharmacist() -> dict | None:
         """The logged-in pharmacist, re-read every time so a disabled account stops at once."""
@@ -262,6 +323,8 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
     @app.post("/read")
     def read():
         lang = lang_arg()
+        if over_limit():
+            return home_page(lang, labels(lang)["daily_limit"].format(n=daily_limit)), 429
         files = [f for f in request.files.getlist("photos") if f and f.filename][:MAX_PHOTOS]
         if not files:
             return home_page(lang, labels(lang)["no_photo"]), 400
@@ -345,6 +408,8 @@ def create_app(base_dir: str | Path = ROOT / "out" / "app", reader=default_reade
     def retry(rid):
         """Gemini was busy or offline: read the saved photos again."""
         run = get_run(rid)
+        if over_limit():
+            return home_page(lang_arg(), labels(lang_arg())["daily_limit"].format(n=daily_limit)), 429
         photos = sorted(str(f) for f in (run.dir / "photos").iterdir() if f.is_file())
         return finish(rid, run.dir, photos, kind="retry")
 
@@ -741,6 +806,12 @@ def main() -> None:
     p.add_argument("--port", type=int, default=5060)
     a = p.parse_args()
     create_app().run(host=a.host, port=a.port, debug=False)
+
+
+def wsgi() -> Flask:
+    """Entry point for a production server: gunicorn "strip_reader.app:wsgi()"."""
+    load_dotenv(ROOT / ".env")
+    return create_app()
 
 
 if __name__ == "__main__":

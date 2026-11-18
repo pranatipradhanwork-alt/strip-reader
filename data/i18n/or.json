@@ -94,7 +94,8 @@
     "role_pharmacist_sub",
     "for_pharmacists",
     "pharmacist_tab",
-    "splash_caption"
+    "splash_caption",
+    "daily_limit"
   ],
   "title": "ଆଜିର ଔଷଧ",
   "morning": "ସକାଳ",
@@ -218,5 +219,6 @@
   "role_pharmacist_sub": "ପ୍ରଶ୍ନର ଉତ୍ତର ଦିଅନ୍ତୁ ଓ ପଢ଼ା ଯାଞ୍ଚ କରନ୍ତୁ (ଯାଞ୍ଚିତ ଆକାଉଣ୍ଟ)",
   "for_pharmacists": "ଫାର୍ମାସିଷ୍ଟଙ୍କ ପାଇଁ",
   "pharmacist_tab": "ଫାର୍ମାସିଷ୍ଟ",
-  "splash_caption": "ପ୍ରତ୍ୟେକ ଔଷଧ, ଠିକ୍ ପଢ଼ା।"
+  "splash_caption": "ପ୍ରତ୍ୟେକ ଔଷଧ, ଠିକ୍ ପଢ଼ା।",
+  "daily_limit": "ଏହି ଡେମୋରେ ଆଜିର {n}ଟି ଫଟୋ ପଢ଼ାର ସୀମା ପୂରଣ ହୋଇଗଲା। ଦୟାକରି କାଲି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ, ବା ଆପଣଙ୍କ ଔଷଧ ଫାର୍ମାସିଷ୍ଟଙ୍କୁ ଦେଖାନ୍ତୁ।"
 }

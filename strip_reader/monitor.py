@@ -116,7 +116,9 @@ def health(medicines_csv: Path, data_dir: Path) -> dict:
     """Quick checks only (no AI call, no model loading), so it is safe to call every few seconds."""
     checks = {
         "ai_key": bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
-        "offline_reader": importlib.util.find_spec("rapidocr_onnxruntime") is not None,
+        # "off" when switched off on purpose (small servers); False only if it should be there but is missing.
+        "offline_reader": "off" if os.getenv("OFFLINE_OCR", "1") == "0"
+        else importlib.util.find_spec("rapidocr_onnxruntime") is not None,
         "medicine_list": medicines_csv.exists(),
         "storage": _writable(data_dir),
     }

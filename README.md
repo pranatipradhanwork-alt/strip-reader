@@ -260,7 +260,10 @@ data/
   i18n/          card text per language
   leaflets/      FDA leaflet sections + embedding index
 scripts/         build_leaflets.py, build_index.py, smoke_test.py
-tests/           129 tests, no API key needed
+deploy/          live-demo.sh (Mac + ngrok), push_space.sh (Hugging Face), space_header.md
+render.yaml      Render Blueprint (free plan)
+Dockerfile       container for Spaces or any host
+tests/           134 tests, no API key needed
 ```
 
 ## Testing
@@ -289,6 +292,32 @@ It checks the health endpoint, the welcome screen, the sample prescription card,
 | Health | `GET /healthz`: `ok` / `degraded` / `down`, with checks for the AI key, the offline reader, the medicine list and storage. No AI call, so platforms can poll it. |
 | Usage log | One line per reading (log + `instance/metrics.jsonl`): time taken, number of photos, path per photo (AI, offline reader, saved for later, not a medicine), items on the card vs. sent to a pharmacist, and failures by error type. Also chat messages, sign-ins, server errors. **No medicine names, photos or typed text are ever logged.** |
 | Dashboard | `/admin/stats` (and `/admin/stats.json`): today's totals and the median / 90th-percentile time of real photo readings. Off unless `ADMIN_TOKEN` is set; then password-protected. |
+
+## Deployment
+
+Two ways, same code and the same production settings (gunicorn server, 10 photo readings per visitor per day, readings and photos deleted after 24 hours, `/healthz` health check).
+
+**1. Render (always on, free).** `render.yaml` is a Render Blueprint: *New → Blueprint →* this repo, then paste the secrets it asks for (`GEMINI_API_KEY`, `ADMIN_TOKEN`, `DEMO_PHARMACIST`; `SECRET_KEY` is generated). Every merge to `main` redeploys. The free plan has 512 MB of memory and the offline reader needs about 400 MB, so it is switched off there (`OFFLINE_OCR=0`): when the AI is unavailable the photo is saved and the person taps *Try again*. The free plan sleeps after 15 minutes idle (the next visit takes about a minute) and readings reset on restart.
+
+**2. Live demo from a Mac (one command).** Starts the app in production mode with everything on, including the offline reader, and opens a public https link with ngrok:
+
+```bash
+./deploy/live-demo.sh          # Ctrl+C stops the app and the link
+```
+
+Demo data stays in `out/demo`, apart from your own readings.
+
+| Setting | Meaning |
+|---|---|
+| `DAILY_LIMIT` | photo readings per visitor per day (the built-in sample is never limited) |
+| `RETENTION_HOURS` | delete readings, photos and cached replies older than this |
+| `OFFLINE_OCR` | `0` switches the offline reader off on small servers |
+| `BEHIND_PROXY` | `1` behind a platform proxy, for the visitor's real address |
+| `DEMO_PHARMACIST` | `REG\|Name\|Council\|password`: an approved demo account, clearly marked as a demo |
+
+Secrets live in the host's settings, never in the code. Check any deployment with `python scripts/smoke_test.py <address>`.
+
+Hugging Face Spaces was the first choice (16 GB of memory), but Docker Spaces now need a paid plan; `deploy/push_space.sh` is kept for that case.
 
 ## Limitations
 
