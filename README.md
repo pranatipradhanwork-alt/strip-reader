@@ -4,6 +4,8 @@
 
 **A safety-first reader for medicine strips, boxes and prescriptions, built for elderly users and weak networks.**
 
+**Live demo:** https://strip-reader.onrender.com (free hosting: the first visit after a quiet spell takes about a minute to wake up). Try the sample prescription, or a photo of any medicine strip.
+
 Many elderly people can't read the small print on a medicine strip or a doctor's prescription, so they ask someone else to. Strip Reader takes one photo and returns a simple daily medicine card in the person's language: what each medicine is, when to take it, and what it is used for. When the app is unsure, it **says so and sends the person to a pharmacist** instead of guessing. It never invents a dose.
 
 ---
